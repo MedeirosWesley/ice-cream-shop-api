@@ -20,7 +20,7 @@ export class PopsicleController {
 
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Popsicle> {
-    return this.popsicleService.findOne(+id);
+    return this.popsicleService.findOne(id);
   }
 
   @Put(':id')
@@ -28,11 +28,11 @@ export class PopsicleController {
     @Param('id') id: string,
     @Body() updatePopsicleDto: UpdatePopsicleDto,
   ): Promise<Popsicle> {
-    return this.popsicleService.update(+id, updatePopsicleDto);
+    return this.popsicleService.update(id, updatePopsicleDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
-    return this.popsicleService.remove(+id);
+    return this.popsicleService.remove(id);
   }
 }

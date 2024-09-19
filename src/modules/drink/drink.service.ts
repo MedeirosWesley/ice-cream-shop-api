@@ -21,16 +21,16 @@ export class DrinkService {
     return this.drinkRepository.find();
   }
 
-  findOne(id: number): Promise<Drink> {
+  findOne(id: string): Promise<Drink> {
     return this.drinkRepository.findOneBy({ id });
   }
 
-  async update(id: number, updateDrinkDto: UpdateDrinkDto): Promise<Drink> {
+  async update(id: string, updateDrinkDto: UpdateDrinkDto): Promise<Drink> {
     await this.drinkRepository.update(id, updateDrinkDto);
     return this.findOne(id);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await this.drinkRepository.delete(id);
   }
 }

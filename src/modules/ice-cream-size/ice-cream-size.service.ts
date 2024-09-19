@@ -22,16 +22,16 @@ export class IceCreamSizeService {
     return this.iceCreamSizeRepository.find();
   }
 
-  findOne(id: number): Promise<IceCreamSize> {
+  findOne(id: string): Promise<IceCreamSize> {
     return this.iceCreamSizeRepository.findOneBy({ id });
   }
 
-  async update(id: number, updateIceCreamSizeDto: UpdateIceCreamSizeDto): Promise<IceCreamSize> {
+  async update(id: string, updateIceCreamSizeDto: UpdateIceCreamSizeDto): Promise<IceCreamSize> {
     await this.iceCreamSizeRepository.update(id, updateIceCreamSizeDto);
     return this.findOne(id);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await this.iceCreamSizeRepository.delete(id);
   }
 }

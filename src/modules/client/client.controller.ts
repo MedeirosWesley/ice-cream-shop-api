@@ -14,7 +14,7 @@ export class ClientController {
 
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Client> {
-    return this.clientService.findOne(+id);
+    return this.clientService.findOne(id);
   }
 
   @Post()
@@ -24,6 +24,6 @@ export class ClientController {
 
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
-    return this.clientService.remove(+id);
+    return this.clientService.remove(id);
   }
 }

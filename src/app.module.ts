@@ -10,6 +10,8 @@ import { IceCreamSyrupModule } from './modules/ice-cream-syrup/ice-cream-syrup.m
 import { MotorcycleCourierModule } from './modules/motorcycle_courier/motorcycle_courier.module';
 import { PopsicleModule } from './modules/popsicle/popsicle.module';
 import { IceCreamSizeModule } from './modules/ice-cream-size/ice-cream-size.module';
+import { OrderModule } from './modules/order/order.module';
+import { AcaiModule } from './modules/acai/acai.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { IceCreamSizeModule } from './modules/ice-cream-size/ice-cream-size.modu
     MotorcycleCourierModule,
     PopsicleModule,
     IceCreamSizeModule,
+    OrderModule,
+    AcaiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

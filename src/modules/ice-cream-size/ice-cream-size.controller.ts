@@ -21,7 +21,7 @@ export class IceCreamSizeController {
 
   @Get(':id')
   findOne(@Param('id') id: string): Promise<IceCreamSize> {
-    return this.iceCreamSizeService.findOne(+id);
+    return this.iceCreamSizeService.findOne(id);
   }
 
   @Put(':id')
@@ -29,11 +29,11 @@ export class IceCreamSizeController {
     @Param('id') id: string,
     @Body() updateIceCreamSizeDto: UpdateIceCreamSizeDto,
   ): Promise<IceCreamSize> {
-    return this.iceCreamSizeService.update(+id, updateIceCreamSizeDto);
+    return this.iceCreamSizeService.update(id, updateIceCreamSizeDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
-    return this.iceCreamSizeService.remove(+id);
+    return this.iceCreamSizeService.remove(id);
   }
 }

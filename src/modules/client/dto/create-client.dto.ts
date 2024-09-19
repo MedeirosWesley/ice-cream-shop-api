@@ -1,8 +1,6 @@
 import { IsNotEmpty, IsNumber, IsString } from "class-validator";
 
 export class CreateClientDto {
-  @IsNumber()
-  id: number;
   @IsNotEmpty({ message: "O Telefone não pode ser vazio!" })
   @IsString()
   phone: string;

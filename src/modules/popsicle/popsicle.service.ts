@@ -21,16 +21,16 @@ export class PopsicleService {
     return this.popsicleRepository.find();
   }
 
-  findOne(id: number): Promise<Popsicle> {
+  findOne(id: string): Promise<Popsicle> {
     return this.popsicleRepository.findOneBy({ id });
   }
 
-  async update(id: number, updatePopsicleDto: UpdatePopsicleDto): Promise<Popsicle> {
+  async update(id: string, updatePopsicleDto: UpdatePopsicleDto): Promise<Popsicle> {
     await this.popsicleRepository.update(id, updatePopsicleDto);
     return this.findOne(id);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await this.popsicleRepository.delete(id);
   }
 }
