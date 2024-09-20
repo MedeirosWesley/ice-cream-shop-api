@@ -7,7 +7,7 @@ import { Additional } from '../additional/entities/additional.entity';
 import { OrderAdditional } from '../order/entities/order-additional.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Acai, OrderAdditional])],
+  imports: [TypeOrmModule.forFeature([Acai, OrderAdditional, Additional])],
   controllers: [AcaiController],
   providers: [AcaiService],
 })

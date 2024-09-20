@@ -10,7 +10,7 @@ export class Acai {
   @Column()
   sizeId: string;
 
-  @ManyToOne(() => IceCreamSize)
+  @ManyToOne(() => IceCreamSize, { eager: true })
   @JoinColumn()
   size: IceCreamSize;
 

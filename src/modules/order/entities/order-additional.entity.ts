@@ -13,7 +13,7 @@ export class OrderAdditional {
   @Column()
   isSeparated: boolean;
 
-  @ManyToOne(() => Acai, acai => acai.additionals)
+  @ManyToOne(() => Acai, acai => acai.additionals, { onDelete: 'CASCADE' })
   @JoinColumn()
   acai: Acai;
 

@@ -4,29 +4,60 @@ import { Acai } from './entities/acai.entity';
 import { Repository } from 'typeorm';
 import { CreateAcaiDto } from './dto/create-acai.dto';
 import { UpdateAcaiDto } from './dto/update-acai.dto';
+import { OrderAdditional } from '../order/entities/order-additional.entity';
+import { Additional } from '../additional/entities/additional.entity';
 
 @Injectable()
 export class AcaiService {
   constructor(
     @InjectRepository(Acai)
     private readonly acaiRepository: Repository<Acai>,
+    @InjectRepository(OrderAdditional)
+    private orderAdditionalRepository: Repository<OrderAdditional>,
+    @InjectRepository(Additional)
+    private additionalRepository: Repository<Additional>,
   ) { }
 
-  async create(acaiDetails: Partial<CreateAcaiDto>): Promise<Acai> {
-    const acai = this.acaiRepository.create(acaiDetails);
+  async create(createAcaiDto: Partial<CreateAcaiDto>): Promise<Acai> {
+    const { sizeId, additionals } = createAcaiDto;
+
+    // Criar os orderAdditionals
+    const orderAdditionals = await Promise.all(
+      additionals.map(async (item) => {
+        // Buscar o additional relacionado
+        const additional = await this.additionalRepository.findOne({ where: { id: item.additionalId } });
+
+        if (!additional) {
+          throw new Error(`Additional with id ${item.additionalId} not found`);
+        }
+
+        // Criar o OrderAdditional com o Additional encontrado
+        return this.orderAdditionalRepository.create({
+          additional, // Aqui associamos o additional
+          quantity: item.quantity,
+          isSeparated: item.isSeparated,
+        });
+      }),
+    );
+
+    const acai = this.acaiRepository.create({
+      sizeId,
+      additionals: orderAdditionals,
+    });
+
     return this.acaiRepository.save(acai);
   }
 
   async findAll(): Promise<Acai[]> {
     return this.acaiRepository.find({
-      relations: ['orderAdditionals'],
+      relations: ['additionals', 'additionals.additional'],
     });
   }
 
   async findOne(id: string): Promise<Acai> {
     return this.acaiRepository.findOne({
       where: { id },
-      relations: ['orderAdditionals'],
+      relations: ['additionals', 'additionals.additional'],
     });
   }
 
