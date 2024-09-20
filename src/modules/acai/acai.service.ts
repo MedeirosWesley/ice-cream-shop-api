@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Acai } from './entities/acai.entity';
 import { Repository } from 'typeorm';
 import { CreateAcaiDto } from './dto/create-acai.dto';
 import { UpdateAcaiDto } from './dto/update-acai.dto';
-import { OrderAdditional } from '../order/entities/order-additional.entity';
+import { AcaiAdditional } from '../order/entities/order-additional.entity';
 import { Additional } from '../additional/entities/additional.entity';
 
 @Injectable()
@@ -12,8 +12,8 @@ export class AcaiService {
   constructor(
     @InjectRepository(Acai)
     private readonly acaiRepository: Repository<Acai>,
-    @InjectRepository(OrderAdditional)
-    private orderAdditionalRepository: Repository<OrderAdditional>,
+    @InjectRepository(AcaiAdditional)
+    private acaiAdditionalRepository: Repository<AcaiAdditional>,
     @InjectRepository(Additional)
     private additionalRepository: Repository<Additional>,
   ) { }
@@ -28,11 +28,11 @@ export class AcaiService {
         const additional = await this.additionalRepository.findOne({ where: { id: item.additionalId } });
 
         if (!additional) {
-          throw new Error(`Additional with id ${item.additionalId} not found`);
+          throw new BadRequestException(`Additional with id ${item.additionalId} not found`);
         }
 
         // Criar o OrderAdditional com o Additional encontrado
-        return this.orderAdditionalRepository.create({
+        return this.acaiAdditionalRepository.create({
           additional, // Aqui associamos o additional
           quantity: item.quantity,
           isSeparated: item.isSeparated,

@@ -1,5 +1,5 @@
 import { IceCreamSize } from "src/modules/ice-cream-size/entities/ice-cream-size.entity";
-import { OrderAdditional } from "src/modules/order/entities/order-additional.entity";
+import { AcaiAdditional } from "src/modules/order/entities/order-additional.entity";
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
@@ -14,6 +14,6 @@ export class Acai {
   @JoinColumn()
   size: IceCreamSize;
 
-  @OneToMany(() => OrderAdditional, orderAdditional => orderAdditional.acai, { cascade: true, eager: true })
-  additionals: OrderAdditional[];
+  @OneToMany(() => AcaiAdditional, acaiAdditional => acaiAdditional.acai, { cascade: true, eager: true })
+  additionals: AcaiAdditional[];
 }

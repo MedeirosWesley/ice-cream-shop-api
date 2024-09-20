@@ -1,10 +1,9 @@
-import { Acai } from "src/modules/acai/entities/acai.entity";
 import { Additional } from "src/modules/additional/entities/additional.entity";
-import { MilkShake } from "src/modules/milk-shake/entities/milk-shake.entity";
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { MilkShake } from "./milk-shake.entity";
 
 @Entity()
-export class AcaiAdditional {
+export class MilkShakeAdditional {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -14,9 +13,9 @@ export class AcaiAdditional {
   @Column()
   isSeparated: boolean;
 
-  @ManyToOne(() => Acai, acai => acai.additionals, { onDelete: 'CASCADE' })
+  @ManyToOne(() => MilkShake, milkShake => milkShake.additionals, { onDelete: 'CASCADE' })
   @JoinColumn()
-  acai: Acai;
+  milkShake: MilkShake;
 
   @ManyToOne(() => Additional, { eager: true })
   @JoinColumn()

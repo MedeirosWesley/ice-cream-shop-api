@@ -1,15 +1,15 @@
 import { Expose } from "class-transformer";
 
-export class IceCreamSizeDto {
+export class IceCreamSyrupDto {
   @Expose()
   id: string;
 
   @Expose()
-  size: number;
+  name: string;
 
   @Expose()
   type: number;
 
   @Expose()
-  price: number;
+  availability: boolean;
 }

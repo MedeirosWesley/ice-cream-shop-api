@@ -1,10 +1,5 @@
 
 
-// export class Additional {
-//   additionalId: string;
-//   quantity: number;
-//   isSeparated: boolean;
-// }
 
 // // milkshake.entity.ts
 // export class MilkShake {

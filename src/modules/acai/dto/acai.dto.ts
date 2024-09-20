@@ -2,9 +2,6 @@ import { Expose, Type } from "class-transformer";
 import { OrderAdditionalDto } from "../../additional/dto/order-additional.dto";
 import { IceCreamSizeDto } from "../../ice-cream-size/dto/ice-cream-size.dto";
 
-
-
-
 export class AcaiDto {
   @Expose()
   id: string;
@@ -17,3 +14,5 @@ export class AcaiDto {
   @Expose()
   size: IceCreamSizeDto;
 }
+
+

@@ -4,10 +4,10 @@ import { AcaiController } from './acai.controller';
 import { Acai } from './entities/acai.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Additional } from '../additional/entities/additional.entity';
-import { OrderAdditional } from '../order/entities/order-additional.entity';
+import { AcaiAdditional } from '../order/entities/order-additional.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Acai, OrderAdditional, Additional])],
+  imports: [TypeOrmModule.forFeature([Acai, AcaiAdditional, Additional])],
   controllers: [AcaiController],
   providers: [AcaiService],
 })
