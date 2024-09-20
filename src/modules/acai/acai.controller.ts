@@ -2,6 +2,8 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { AcaiService } from './acai.service';
 import { CreateAcaiDto } from './dto/create-acai.dto';
 import { UpdateAcaiDto } from './dto/update-acai.dto';
+import { plainToInstance } from 'class-transformer';
+import { AcaiDto } from './dto/acai.dto';
 
 @Controller('acai')
 export class AcaiController {
@@ -9,12 +11,12 @@ export class AcaiController {
 
   @Post()
   create(@Body() createAcaiDto: CreateAcaiDto) {
-    return this.acaiService.create(createAcaiDto);
+    return plainToInstance(AcaiDto, this.acaiService.create(createAcaiDto), { excludeExtraneousValues: true });
   }
 
   @Get()
   findAll() {
-    return this.acaiService.findAll();
+    return plainToInstance(AcaiDto, this.acaiService.findAll(), { excludeExtraneousValues: true });
   }
 
   @Get(':id')
