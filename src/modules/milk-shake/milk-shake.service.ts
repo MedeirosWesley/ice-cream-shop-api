@@ -21,7 +21,7 @@ export class MilkShakeService {
     @InjectRepository(IceCreamFlavor)
     private iceCreamFlavorRepository: Repository<IceCreamFlavor>,
     @InjectRepository(MilkshakeIceCreamFlavor)
-    private orderIceCreamFlavorRepository: Repository<MilkshakeIceCreamFlavor>,
+    private milkShakeIceCreamFlavorRepository: Repository<MilkshakeIceCreamFlavor>,
   ) { }
 
   async create(createMilkShakeDto: Partial<CreateMilkShakeDto>): Promise<MilkShake> {
@@ -51,7 +51,7 @@ export class MilkShakeService {
           throw new BadRequestException(`Flavor with id ${flavorId} not found`);
         }
 
-        return this.orderIceCreamFlavorRepository.create({
+        return this.milkShakeIceCreamFlavorRepository.create({
           iceCreamFlavor: flavor,
         });
       }),);
@@ -84,21 +84,21 @@ export class MilkShakeService {
   async update(id: string, milkShakeDetails: Partial<UpdateMilkShakeDto>): Promise<MilkShake> {
 
     const milkShake = await this.findOne(id);
-    const itensExcluidos = milkShake.flavors.map(k => k.iceCreamFlavor.id).filter(oldFlavorId => !milkShakeDetails.additionals.map(newFlavorId => newFlavorId.additionalId).includes(oldFlavorId));
-    const novosItens = milkShakeDetails.additionals.map(newFlavorId => newFlavorId.additionalId).filter(item => !milkShake.flavors.map(k => k.iceCreamFlavor.id).includes(item));
+    const excludedItems = milkShake.flavors.map(k => k.iceCreamFlavor.id).filter(oldFlavorId => !milkShakeDetails.additionals.map(newFlavorId => newFlavorId.additionalId).includes(oldFlavorId));
+    const newItems = milkShakeDetails.additionals.map(newFlavorId => newFlavorId.additionalId).filter(item => !milkShake.flavors.map(k => k.iceCreamFlavor.id).includes(item));
 
-    await Promise.all(itensExcluidos.map(async (flavorId) => {
-      await this.orderIceCreamFlavorRepository.delete({ milkshake: milkShake, iceCreamFlavor: { id: flavorId } });
+    await Promise.all(excludedItems.map(async (flavorId) => {
+      await this.milkShakeIceCreamFlavorRepository.delete({ milkshake: milkShake, iceCreamFlavor: { id: flavorId } });
     }));
 
-    await Promise.all(novosItens.map(async (flavorId) => {
+    await Promise.all(newItems.map(async (flavorId) => {
       const flavor = await this.iceCreamFlavorRepository.findOne({ where: { id: flavorId } });
 
       if (!flavor) {
         throw new BadRequestException(`Flavor with id ${flavorId} not found`);
       }
 
-      return this.orderIceCreamFlavorRepository.create({
+      return this.milkShakeIceCreamFlavorRepository.create({
         iceCreamFlavor: flavor,
       });
     }));
