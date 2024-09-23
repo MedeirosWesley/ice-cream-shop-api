@@ -9,38 +9,38 @@ import { InjectRepository } from '@nestjs/typeorm';
 export class PopsicleOrderService {
   constructor(
     @InjectRepository(PopsicleOrder)
-    private readonly popsicleOrdereRepository: Repository<PopsicleOrder>,
+    private readonly popsicleOrderRepository: Repository<PopsicleOrder>,
   ) { }
 
   create(createPopsicleOrderDto: CreatePopsicleOrderDto) {
     const { popsicleId, quantity, withSyrup } = createPopsicleOrderDto;
-    const popsicleOrder = this.popsicleOrdereRepository.create({
+    const popsicleOrder = this.popsicleOrderRepository.create({
       popsicleId,
       quantity,
       withSyrup,
     });
-    return this.popsicleOrdereRepository.save(popsicleOrder);
+    return this.popsicleOrderRepository.save(popsicleOrder);
   }
 
   findAll() {
-    return this.popsicleOrdereRepository.find({
+    return this.popsicleOrderRepository.find({
       relations: ['popsicle'],
     });
   }
 
   findOne(id: string) {
-    return this.popsicleOrdereRepository.findOne({
+    return this.popsicleOrderRepository.findOne({
       where: { id },
       relations: ['popsicle'],
     });
   }
 
   update(id: string, updatePopsicleOrderDto: UpdatePopsicleOrderDto) {
-    return this.popsicleOrdereRepository.update(id, updatePopsicleOrderDto);
+    return this.popsicleOrderRepository.update(id, updatePopsicleOrderDto);
   }
 
   remove(id: string) {
-    return this.popsicleOrdereRepository.delete(id);
+    return this.popsicleOrderRepository.delete(id);
   }
 
 }
