@@ -6,7 +6,7 @@ import { MilkShake } from './entities/milk-shake.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Additional } from '../additional/entities/additional.entity';
 import { IceCreamFlavor } from '../ice-cream-flavor/entities/ice-cream-flavor.entity';
-import { OrderIceCreamFlavor } from '../ice-cream-flavor/entities/order-ice-cream-flavor.entity';
+import { MilkshakeIceCreamFlavor } from '../ice-cream-flavor/entities/order-ice-cream-flavor.entity';
 import { MilkShakeAdditional } from './entities/milk-shake-additional.entity';
 
 @Injectable()
@@ -20,8 +20,8 @@ export class MilkShakeService {
     private additionalRepository: Repository<Additional>,
     @InjectRepository(IceCreamFlavor)
     private iceCreamFlavorRepository: Repository<IceCreamFlavor>,
-    @InjectRepository(OrderIceCreamFlavor)
-    private orderIceCreamFlavorRepository: Repository<OrderIceCreamFlavor>,
+    @InjectRepository(MilkshakeIceCreamFlavor)
+    private orderIceCreamFlavorRepository: Repository<MilkshakeIceCreamFlavor>,
   ) { }
 
   async create(createMilkShakeDto: Partial<CreateMilkShakeDto>): Promise<MilkShake> {

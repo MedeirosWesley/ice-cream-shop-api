@@ -3,7 +3,7 @@ import { Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { IceCreamFlavor } from "./ice-cream-flavor.entity";
 
 @Entity()
-export class OrderIceCreamFlavor {
+export class MilkshakeIceCreamFlavor {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
