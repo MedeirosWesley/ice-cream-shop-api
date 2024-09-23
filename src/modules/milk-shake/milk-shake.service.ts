@@ -6,7 +6,7 @@ import { MilkShake } from './entities/milk-shake.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Additional } from '../additional/entities/additional.entity';
 import { IceCreamFlavor } from '../ice-cream-flavor/entities/ice-cream-flavor.entity';
-import { MilkshakeIceCreamFlavor } from '../ice-cream-flavor/entities/order-ice-cream-flavor.entity';
+import { MilkshakeIceCreamFlavor } from '../ice-cream-flavor/entities/milk-shake-ice-cream-flavor.entity';
 import { MilkShakeAdditional } from './entities/milk-shake-additional.entity';
 
 @Injectable()
