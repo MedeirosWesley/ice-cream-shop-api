@@ -1,13 +1,6 @@
 
 
 
-// // milkshake.entity.ts
-// export class MilkShake {
-//   sizeId: string;
-//   syrupId: string;
-//   flavors: string[];
-//   additional: Additional[];
-// }
 
 // // popsicle.entity.ts
 // export class Popsicle {

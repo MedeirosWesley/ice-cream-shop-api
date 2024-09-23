@@ -13,6 +13,7 @@ import { IceCreamSizeModule } from './modules/ice-cream-size/ice-cream-size.modu
 import { OrderModule } from './modules/order/order.module';
 import { AcaiModule } from './modules/acai/acai.module';
 import { MilkShakeModule } from './modules/milk-shake/milk-shake.module';
+import { PopsicleOrderModule } from './modules/popsicle-order/popsicle-order.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MilkShakeModule } from './modules/milk-shake/milk-shake.module';
     OrderModule,
     AcaiModule,
     MilkShakeModule,
+    PopsicleOrderModule,
   ],
   controllers: [AppController],
   providers: [AppService],

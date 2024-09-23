@@ -21,12 +21,12 @@ export class MilkShakeController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.milkShakeService.findOne(id);
+    return plainToInstance(MilkShakeDto, this.milkShakeService.findOne(id), { excludeExtraneousValues: true });
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateMilkShakeDto: UpdateMilkShakeDto) {
-    return this.milkShakeService.update(id, updateMilkShakeDto);
+    return plainToInstance(MilkShakeDto, this.milkShakeService.update(id, updateMilkShakeDto), { excludeExtraneousValues: true });
   }
 
   @Delete(':id')
