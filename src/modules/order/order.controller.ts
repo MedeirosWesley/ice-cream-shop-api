@@ -2,10 +2,11 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { PrinterService } from '../printer/printer.service';
 
 @Controller('order')
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(private readonly orderService: OrderService, private readonly printService: PrinterService) { }
 
   @Post()
   create(@Body() createOrderDto: CreateOrderDto) {
@@ -30,5 +31,12 @@ export class OrderController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.orderService.remove(+id);
+  }
+
+  @Post('print')
+  async printOrder(@Body() orderData: { details: string }) {
+    const { details } = orderData;
+    await this.printService.printOrder(details);
+    return { message: 'Ordem enviada para impressão!' };
   }
 }
