@@ -8,5 +8,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   imports: [TypeOrmModule.forFeature([PopsicleOrder])],
   controllers: [PopsicleOrderController],
   providers: [PopsicleOrderService],
+  exports: [PopsicleOrderService],
 })
 export class PopsicleOrderModule { }

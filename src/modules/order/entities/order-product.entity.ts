@@ -1,14 +1,18 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from 'typeorm';
-import { Order } from './order.entity';
 import { Acai } from 'src/modules/acai/entities/acai.entity';
+import { MilkShake } from 'src/modules/milk-shake/entities/milk-shake.entity';
+import { Popsicle } from 'src/modules/popsicle/entities/popsicle.entity';
+import { Drink } from 'src/modules/drink/entities/drink.entity';
+import { IceCreamOrder } from 'src/modules/ice-cream-order/entities/ice-cream-order.entity';
+import { IceCreamPotOrder } from 'src/modules/ice-cream-pot-order/entities/ice-cream-pot-order.entity';
+import { PopsicleOrder } from 'src/modules/popsicle-order/entities/popsicle-order.entity';
+import { DrinkOrder } from 'src/modules/drink-order/entities/drink-order.entity';
+import { Order } from './order.entity';
 
 @Entity()
 export class OrderProduct {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
-  @ManyToOne(() => Order, order => order.products)
-  order: Order;
 
   @Column('int')
   quantity: number;
@@ -16,24 +20,27 @@ export class OrderProduct {
   @Column({ nullable: true })
   observation: string;
 
-  @Column('varchar') // Pode ser usado para armazenar o tipo do produto, ex: "acai", "milk_shake"
+  @Column()
   productType: string;
 
-  @ManyToOne(() => Acai, { nullable: true }) // Relacionamento com a entidade Acai
+  @ManyToOne(() => Order, order => order.products)
+  order: Order;
+
+  @ManyToOne(() => Acai, { eager: true, nullable: true })
   acai: Acai;
 
-  // @ManyToOne(() => MilkShake, { nullable: true })
-  // milkShake: MilkShake;
+  @ManyToOne(() => MilkShake, { nullable: true })
+  milkShake: MilkShake;
 
-  // @ManyToOne(() => Popsicle, { nullable: true })
-  // popsicle: Popsicle;
+  @ManyToOne(() => PopsicleOrder, { nullable: true })
+  popsicle: Popsicle;
 
-  // @ManyToOne(() => Drink, { nullable: true })
-  // drink: Drink;
+  @ManyToOne(() => DrinkOrder, { nullable: true })
+  drink: Drink;
 
-  // @ManyToOne(() => IceCream, { nullable: true })
-  // iceCream: IceCream;
+  @ManyToOne(() => IceCreamOrder, { nullable: true })
+  iceCream: IceCreamOrder;
 
-  // @ManyToOne(() => IceCreamPot, { nullable: true })
-  // iceCreamPot: IceCreamPot;
+  @ManyToOne(() => IceCreamPotOrder, { nullable: true })
+  iceCreamPot: IceCreamPotOrder;
 }

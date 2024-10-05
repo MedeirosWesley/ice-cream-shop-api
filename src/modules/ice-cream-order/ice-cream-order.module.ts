@@ -10,5 +10,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   imports: [TypeOrmModule.forFeature([IceCreamOrder, IceCreamFlavor, IceCreamFlavorOrder])],
   controllers: [IceCreamOrderController],
   providers: [IceCreamOrderService],
+  exports: [IceCreamOrderService],
 })
 export class IceCreamOrderModule { }

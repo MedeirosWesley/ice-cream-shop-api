@@ -10,5 +10,6 @@ import { AcaiAdditional } from '../order/entities/order-additional.entity';
   imports: [TypeOrmModule.forFeature([Acai, AcaiAdditional, Additional])],
   controllers: [AcaiController],
   providers: [AcaiService],
+  exports: [AcaiService],
 })
 export class AcaiModule { }

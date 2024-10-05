@@ -12,5 +12,6 @@ import { MilkShakeAdditional } from './entities/milk-shake-additional.entity';
   imports: [TypeOrmModule.forFeature([MilkShake, MilkShakeAdditional, Additional, IceCreamFlavor, MilkshakeIceCreamFlavor])],
   controllers: [MilkShakeController],
   providers: [MilkShakeService],
+  exports: [MilkShakeService],
 })
 export class MilkShakeModule { }

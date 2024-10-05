@@ -17,6 +17,7 @@ import { PopsicleOrderModule } from './modules/popsicle-order/popsicle-order.mod
 import { DrinkOrderModule } from './modules/drink-order/drink-order.module';
 import { IceCreamOrderModule } from './modules/ice-cream-order/ice-cream-order.module';
 import { PrinterModule } from './modules/printer/printer.module';
+import { IceCreamPotOrderModule } from './modules/ice-cream-pot-order/ice-cream-pot-order.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { PrinterModule } from './modules/printer/printer.module';
     DrinkOrderModule,
     IceCreamOrderModule,
     PrinterModule,
+    IceCreamPotOrderModule,
   ],
   controllers: [AppController],
   providers: [AppService],
