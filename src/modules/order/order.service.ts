@@ -2,11 +2,10 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AcaiService } from '../acai/acai.service';
 import { MilkShakeService } from '../milk-shake/milk-shake.service';
-import { PopsicleService } from '../popsicle/popsicle.service';
 import { IceCreamOrderService } from '../ice-cream-order/ice-cream-order.service';
 import { IceCreamPotOrderService } from '../ice-cream-pot-order/ice-cream-pot-order.service';
 import { CreateAcaiDto } from '../acai/dto/create-acai.dto';
@@ -45,30 +44,40 @@ export class OrderService {
 
     for (const createProduct of createOrderDto.products) {
       const product = createProduct.product;
+      const orderProduct = this.orderProductRepository.create()
+      orderProduct.quantity = createProduct.quantity
+      orderProduct.observation = createProduct.observation
+      orderProduct.productType = product.type;
       switch (product.type) {
         case 'acai':
           const acai = await this.acaiService.create(product.details as CreateAcaiDto)
-          const orderProduct = this.orderProductRepository.create()
-          orderProduct.quantity = createProduct.quantity
-          orderProduct.observation = createProduct.observation
-          orderProduct.productType = 'acai'
           orderProduct.acai = acai
           products.push(orderProduct);
           break;
         case 'milk_shake':
-          products.push(await this.milkShakeService.create(product.details as CreateMilkShakeDto));
+          const milkShake = await this.milkShakeService.create(product.details as CreateMilkShakeDto);
+          orderProduct.milkShake = milkShake;
+          products.push(orderProduct);
           break;
         case 'drink':
-          products.push(await this.drinkService.create(product.details as CreateDrinkOrderDto));
+          const drink = await this.drinkService.create(product.details as CreateDrinkOrderDto);
+          orderProduct.drink = drink;
+          products.push(orderProduct);
           break;
         case 'ice_cream':
-          products.push(await this.iceCreamService.create(product.details as CreateIceCreamOrderDto));
+          const iceCream = await this.iceCreamService.create(product.details as CreateIceCreamOrderDto);
+          orderProduct.iceCream = iceCream;
+          products.push(orderProduct);
           break;
         case 'ice_cream_pot':
-          products.push(await this.iceCreamPotService.create(product.details as CreateIceCreamPotOrderDto));
+          const IceCreamPot = await this.iceCreamPotService.create(product.details as CreateIceCreamPotOrderDto);
+          orderProduct.iceCreamPot = IceCreamPot;
+          products.push(orderProduct);
           break;
         case 'popsicle':
-          products.push(await this.popsicleService.create(product.details as CreatePopsicleOrderDto));
+          const popsicle = await this.popsicleService.create(product.details as CreatePopsicleOrderDto);
+          orderProduct.popsicle = popsicle;
+          products.push(orderProduct);
           break;
         default:
           throw new BadRequestException(`Invalid product type ${product}`);

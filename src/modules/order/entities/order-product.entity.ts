@@ -1,8 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from 'typeorm';
 import { Acai } from 'src/modules/acai/entities/acai.entity';
 import { MilkShake } from 'src/modules/milk-shake/entities/milk-shake.entity';
-import { Popsicle } from 'src/modules/popsicle/entities/popsicle.entity';
-import { Drink } from 'src/modules/drink/entities/drink.entity';
 import { IceCreamOrder } from 'src/modules/ice-cream-order/entities/ice-cream-order.entity';
 import { IceCreamPotOrder } from 'src/modules/ice-cream-pot-order/entities/ice-cream-pot-order.entity';
 import { PopsicleOrder } from 'src/modules/popsicle-order/entities/popsicle-order.entity';
@@ -33,10 +31,10 @@ export class OrderProduct {
   milkShake: MilkShake;
 
   @ManyToOne(() => PopsicleOrder, { nullable: true })
-  popsicle: Popsicle;
+  popsicle: PopsicleOrder;
 
   @ManyToOne(() => DrinkOrder, { nullable: true })
-  drink: Drink;
+  drink: DrinkOrder;
 
   @ManyToOne(() => IceCreamOrder, { nullable: true })
   iceCream: IceCreamOrder;
