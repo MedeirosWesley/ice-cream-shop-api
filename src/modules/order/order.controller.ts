@@ -3,6 +3,7 @@ import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PrinterService } from '../printer/printer.service';
+import { OrderDto } from './dto/order.dto';
 
 @Controller('order')
 export class OrderController {
@@ -34,7 +35,7 @@ export class OrderController {
   }
 
   @Post('print')
-  async printOrder(@Body() orderData: { details: string }) {
+  async printOrder(@Body() orderData: { details: OrderDto }) {
     const { details } = orderData;
     await this.printService.printOrder(details);
     return { message: 'Ordem enviada para impressão!' };

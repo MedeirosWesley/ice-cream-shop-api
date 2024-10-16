@@ -1,28 +1,75 @@
 import { Injectable } from '@nestjs/common';
 import * as escpos from 'escpos';
 import * as escposUSB from 'escpos-usb';
+import { OrderDto } from '../order/dto/order.dto';
+import { ProductOrderDto } from '../order/dto/product-order.dto';
+import { AcaiDto } from '../acai/dto/acai.dto';
+import { MilkShakeDto } from '../milk-shake/dto/milk-shake.dto';
+import { PopsicleDto } from '../popsicle/dto/popsicle.dto';
+import { PopsicleOrderDto } from '../popsicle-order/dto/popsicle-order.dto';
+import { DrinkOrderDto } from '../drink-order/dto/drink-order.dto';
+import { IceCreamOrderDto } from '../ice-cream-order/dto/ice-cream-order.dto';
 
 
 @Injectable()
 export class PrinterService {
-  async printOrder(orderDetails) {
-    // const orderDetails = {
-    //   orderNumber: '12345',
-    //   customerName: 'teste do João Silva',
-    //   items: [
-    //     { name: 'Açaí 500ml', quantity: 1, price: 12.00 },
-    //     { name: 'Granola', quantity: 1, price: 2.50 },
-    //     { name: 'Banana', quantity: 1, price: 1.50 }
-    //   ],
-    //   total: 16.00,
-    //   date: new Date().toLocaleString()
-    // };
+  async printOrder(orderDetails: OrderDto) {
 
-    // Função para formatar os itens do pedido
-
-    function formatItems(items) {
+    function formatItems(items: ProductOrderDto[]) {
       return items.map(item => {
-        return `${item.quantity}x ${item.name} ....... R$${item.price.toFixed(2)}`;
+        switch (item.productType) {
+          case 'acai':
+
+            const acai = item.product as AcaiDto;
+            let acaiprintItem = `${item.quantity}x Açaí ${acai.size.size.toFixed(0)} .......... R$${acai.size.price.toFixed(2)}`;
+
+            acai.additionals.forEach(additional => {
+              const name = `${additional.quantity}x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
+              const price = `R$${(item.quantity * additional.additional.price).toFixed(2)}`;
+
+              const dots = '.'.repeat(35 - name.length - price.length);  // Ajuste o número 30 conforme necessário
+              acaiprintItem += `\n\t${name} ${dots} ${price}`;
+            });
+            return acaiprintItem;
+          case 'milk_shake':
+            const milkShake = item.product as MilkShakeDto;
+            let milkShakePrintItem = `${item.quantity}x Milk Shake ${milkShake.size.size.toFixed(0)} .......... R$${(item.quantity * milkShake.size.price).toFixed(2)}`;
+            milkShake.additionals.forEach(additional => {
+              const name = `${additional.quantity}x ${additional.additional.name}`;
+              const price = `R$${additional.additional.price.toFixed(2)}`;
+
+              const dots = '.'.repeat(30 - name.length - price.length);  // Ajuste o número 30 conforme necessário
+              milkShakePrintItem += `\n\t${name} ${dots} ${price}`;
+            });
+            return milkShakePrintItem;
+          case 'popsicle':
+            const popsicle = item.product as PopsicleOrderDto;
+            let popsiclePrintItem = `${item.quantity}x Picolé`
+            popsiclePrintItem += `\n\t${popsicle.popsicle.name} .......... R$${(item.quantity * popsicle.popsicle.price).toFixed(2)}`;
+          case 'drink':
+            const drink = item.product as DrinkOrderDto;
+            return `${item.quantity}x ${drink.drink.name} .......... R$${(item.quantity * drink.drink.price).toFixed(2)}`;
+          case 'ice_cream':
+            const iceCream = item.product as IceCreamOrderDto;
+            let iceCreamPrintItem = `${item.quantity}x Sorvete ${iceCream.price.toFixed(2)}`;
+            if (iceCream.flavors.length !== 0) {
+              iceCream.flavors.forEach(flavor => {
+                iceCreamPrintItem += `\n\t${flavor.iceCreamFlavor.name}`;
+              });
+            }
+            return iceCreamPrintItem;
+          case 'ice_cream_pot':
+            const iceCreamPot = item.product as IceCreamOrderDto;
+            let iceCreamPotPrintItem = `${item.quantity}x Pote de Sorvete ${iceCreamPot.price.toFixed(2)}`;
+            if (iceCreamPot.flavors.length !== 0) {
+              iceCreamPot.flavors.forEach(flavor => {
+                iceCreamPotPrintItem += `\n\t${flavor.iceCreamFlavor.name}`;
+              });
+            }
+            return iceCreamPotPrintItem;
+          default:
+            return '';
+        }
       }).join('\n');
     }
     try {
@@ -43,18 +90,20 @@ export class PrinterService {
       printer.encode('CP860');
 
 
+
       await printer
-        .align('CT')  // Centralizar
+        .align('CT')
+        .text('Kimolek')
+        .align('LT')
         .text('---- Ordem de Pedido ----')
-        .text(`Número do Pedido: ${orderDetails.orderNumber}`)
-        .text(`Cliente: ${orderDetails.customerName}`)
+        .text(`Número do Pedido: ${orderDetails.id}`)
+        .text(`Cliente: ${orderDetails.client.name}`)
         .text('----------------------------')
-        .text(formatItems(orderDetails.items))  // Lista os itens
+        .text(formatItems(orderDetails.products))  // Lista os itens
         .text('----------------------------')
-        .text(`Total: R$${orderDetails.total.toFixed(2)}`)
-        .text(`Data: ${orderDetails.date}`)
+        .text(`Total: R$${orderDetails}`)
+        .text(`Data: ${orderDetails}`)
         .text('----------------------------')
-        .text('Obrigado pela preferência!')
         .cut()  // Cortar o papel
         .close();
 

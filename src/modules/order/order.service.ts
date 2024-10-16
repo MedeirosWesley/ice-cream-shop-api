@@ -18,6 +18,7 @@ import { CreateDrinkOrderDto } from '../drink-order/dto/create-drink-order.dto';
 import { CreatePopsicleOrderDto } from '../popsicle-order/dto/create-popsicle-order.dto';
 import { PopsicleOrderService } from '../popsicle-order/popsicle-order.service';
 import { OrderProduct } from './entities/order-product.entity';
+import { OrderDto } from './dto/order.dto';
 
 @Injectable()
 export class OrderService {
@@ -81,16 +82,18 @@ export class OrderService {
     return this.orderRepository.save(order);
   }
 
-  findAll() {
-    return this.orderRepository.find({
+  async findAll() {
+    const data = await this.orderRepository.find({
       relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client'],
     });
+
+    return data.map(order => new OrderDto(order));
   }
 
   findOne(id: string) {
     return this.orderRepository.findOne({
       where: { id },
-      relations: ['products'],
+      relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client'],
     });
   }
 

@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { IceCreamOrderService } from './ice-cream-order.service';
 import { CreateIceCreamOrderDto } from './dto/create-ice-cream-order.dto';
 import { UpdateIceCreamOrderDto } from './dto/update-ice-cream-order.dto';
-import { IceCreamFlavorOrderDto } from './dto/ice-cream-order.dto';
+import { IceCreamOrderDto } from './dto/ice-cream-order.dto';
 import { plainToInstance } from 'class-transformer';
 
 @Controller('ice-cream-order')
@@ -11,22 +11,22 @@ export class IceCreamOrderController {
 
   @Post()
   create(@Body() createIceCreamOrderDto: CreateIceCreamOrderDto) {
-    return plainToInstance(IceCreamFlavorOrderDto, this.iceCreamOrderService.create(createIceCreamOrderDto), { excludeExtraneousValues: true });
+    return plainToInstance(IceCreamOrderDto, this.iceCreamOrderService.create(createIceCreamOrderDto), { excludeExtraneousValues: true });
   }
 
   @Get()
   findAll() {
-    return plainToInstance(IceCreamFlavorOrderDto, this.iceCreamOrderService.findAll(), { excludeExtraneousValues: true });
+    return plainToInstance(IceCreamOrderDto, this.iceCreamOrderService.findAll(), { excludeExtraneousValues: true });
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return plainToInstance(IceCreamFlavorOrderDto, this.iceCreamOrderService.findOne(id), { excludeExtraneousValues: true });
+    return plainToInstance(IceCreamOrderDto, this.iceCreamOrderService.findOne(id), { excludeExtraneousValues: true });
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateIceCreamOrderDto: UpdateIceCreamOrderDto) {
-    return plainToInstance(IceCreamFlavorOrderDto, this.iceCreamOrderService.update(id, updateIceCreamOrderDto), { excludeExtraneousValues: true });
+    return plainToInstance(IceCreamOrderDto, this.iceCreamOrderService.update(id, updateIceCreamOrderDto), { excludeExtraneousValues: true });
   }
 
   @Delete(':id')

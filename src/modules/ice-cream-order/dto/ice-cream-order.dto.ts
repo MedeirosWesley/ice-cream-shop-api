@@ -1,7 +1,7 @@
 import { Exclude, Expose, Transform, Type } from "class-transformer";
 import { FlavorDto, IceCreamFlavorDto } from "src/modules/ice-cream-flavor/dto/ice-cream-flavor.dto";
 
-export class IceCreamFlavorOrderDto {
+export class IceCreamOrderDto {
   @Exclude()
   id: string;
 
