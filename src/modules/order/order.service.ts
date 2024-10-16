@@ -86,8 +86,6 @@ export class OrderService {
 
     order.products = products;
 
-    console.log(order);
-
     return this.orderRepository.save(order);
   }
 
@@ -116,6 +114,54 @@ export class OrderService {
     order.clientId = updateOrderDto.clientId;
     order.paymentMethod = updateOrderDto.paymentMethod;
     order.motorcycleCourierId = updateOrderDto.motorcycleCourierId;
+
+    if (updateOrderDto.products) {
+      const products = [];
+
+      for (const createProduct of updateOrderDto.products) {
+        const product = createProduct.product;
+        const orderProduct = this.orderProductRepository.create()
+        orderProduct.quantity = createProduct.quantity
+        orderProduct.observation = createProduct.observation
+        orderProduct.productType = product.type;
+        switch (product.type) {
+          case 'acai':
+            const acai = await this.acaiService.create(product.details as CreateAcaiDto)
+            orderProduct.acai = acai
+            products.push(orderProduct);
+            break;
+          case 'milk_shake':
+            const milkShake = await this.milkShakeService.create(product.details as CreateMilkShakeDto);
+            orderProduct.milkShake = milkShake;
+            products.push(orderProduct);
+            break;
+          case 'drink':
+            const drink = await this.drinkService.create(product.details as CreateDrinkOrderDto);
+            orderProduct.drink = drink;
+            products.push(orderProduct);
+            break;
+          case 'ice_cream':
+            const iceCream = await this.iceCreamService.create(product.details as CreateIceCreamOrderDto);
+            orderProduct.iceCream = iceCream;
+            products.push(orderProduct);
+            break;
+          case 'ice_cream_pot':
+            const IceCreamPot = await this.iceCreamPotService.create(product.details as CreateIceCreamPotOrderDto);
+            orderProduct.iceCreamPot = IceCreamPot;
+            products.push(orderProduct);
+            break;
+          case 'popsicle':
+            const popsicle = await this.popsicleService.create(product.details as CreatePopsicleOrderDto);
+            orderProduct.popsicle = popsicle;
+            products.push(orderProduct);
+            break;
+          default:
+            throw new BadRequestException(`Invalid product type ${product}`);
+        }
+      }
+
+      order.products = products
+    }
 
     return this.orderRepository.save(order);
   }
