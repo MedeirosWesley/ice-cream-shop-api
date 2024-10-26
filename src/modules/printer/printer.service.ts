@@ -33,21 +33,32 @@ export class PrinterService {
               const name = `${additional.quantity} x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
               const price = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}${(additional.quantity * additional.additional.price).toFixed(2)}`;
 
-              const dots = '.'.repeat(37 - name.length - price.length);  // Ajuste o número 30 conforme necessário
+              const dots = '.'.repeat(37 - name.length - price.length);
               acaiprintItem += `\n\t${name} ${dots} ${price}`;
             });
             if (item.observation) acaiprintItem += `\nObservação: ${item.observation}`;
+            let subtotal = ((acai.size.price + acai.additionals.reduce((acc, additional) => acc + additional.additional.price, 0)) * item.quantity);
+            acaiprintItem += `\n\n${' '.repeat(34 - subtotal.toFixed(2).length)}SubTotal: ${subtotal < 10 ? 'R$ ' : 'R$'}${subtotal.toFixed(2)}`;
             return acaiprintItem;
           case 'milk_shake':
             const milkShake = item.product as MilkShakeDto;
-            let milkShakePrintItem = `${item.quantity}x Milk Shake ${milkShake.size.size.toFixed(0)} .......... R$${(item.quantity * milkShake.size.price).toFixed(2)}`;
+            let milkShakePrintItem = '';
+            let milkShakename = `${item.quantity}x Milk Shake ${milkShake.size.size.toFixed(0)}`;
+            let milkShakePrice = `${(item.quantity * milkShake.size.price) < 10 ? `R$ ` : `R$`}${(item.quantity * milkShake.size.price).toFixed(2)}`;
+            const milkDots = '.'.repeat(45 - milkShakename.length - milkShakePrice.length);
+
+            milkShakePrintItem += `${milkShakename} ${milkDots} ${milkShakePrice}`;
             milkShake.additionals.forEach(additional => {
               const name = `${additional.quantity}x ${additional.additional.name}`;
               const price = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}  ${(additional.quantity * additional.additional.price).toFixed(2)}`;
 
-              const dots = '.'.repeat(30 - name.length - price.length);  // Ajuste o número 30 conforme necessário
+              const dots = '.'.repeat(37 - name.length - price.length);  // Ajuste o número 30 conforme necessário
               milkShakePrintItem += `\n\t${name} ${dots} ${price}`;
             });
+            if (item.observation) milkShakePrintItem += `\nObservação: ${item.observation}`;
+            let milkSubtotal = ((milkShake.size.price + milkShake.additionals.reduce((acc, additional) => acc + additional.additional.price, 0)) * item.quantity);
+            milkShakePrintItem += `\n\n${' '.repeat(34 - milkSubtotal.toFixed(2).length)}Subtotal: ${milkSubtotal < 10 ? 'R$ ' : 'R$'}${milkSubtotal.toFixed(2)}`;
+
             return milkShakePrintItem;
           case 'popsicle':
             const popsicle = item.product as PopsicleOrderDto;
@@ -77,7 +88,7 @@ export class PrinterService {
           default:
             return '';
         }
-      }).join(`\n\n/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\n\n`);
+      }).join(`\n===============================================\n\n`);
     }
 
     function formatDateTime(date: string) {
@@ -181,7 +192,7 @@ export class PrinterService {
 
 
       await printer
-        .drawLine()
+        .flush()
         .align('CT')
         .style('B')
         .text('Kimolek')
@@ -194,12 +205,11 @@ export class PrinterService {
         .text(`Número do Pedido: ${orderDetails.productId}`)
         .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
         .text(formatClient(orderDetails.clientName, orderDetails.client))
+        .align('CT')
         .drawLine()
         .feed(1)
         .text(formatItems(orderDetails.products))  // Lista os itens
-        .feed(1)
         .drawLine()
-        .align('RT')
         .feed(1)
         .text(`Total: R$${getTotal(orderDetails.products).toFixed(2)}`)
         .drawLine()
@@ -207,7 +217,6 @@ export class PrinterService {
         .cut()
         .close();
 
-      console.log('Impressão concluída com sucesso');
     } catch (error) {
       console.error('Erro ao imprimir:', error);
     }

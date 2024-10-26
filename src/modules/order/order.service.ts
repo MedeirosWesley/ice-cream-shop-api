@@ -115,7 +115,7 @@ export class OrderService {
 
   async findAll() {
     const data = await this.orderRepository.find({
-      relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client'],
+      relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.milkShake.additionals', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client'],
     });
 
     return data.map(order => new OrderDto(order));
@@ -124,7 +124,7 @@ export class OrderService {
   findOne(id: string) {
     return this.orderRepository.findOne({
       where: { id },
-      relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client'],
+      relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.milkShake.additionals', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client'],
     });
   }
 
