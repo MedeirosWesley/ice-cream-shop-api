@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn, BeforeInsert, getRepository } from 'typeorm';
 import { OrderProduct } from './order-product.entity';
 import { MotorcycleCourier } from 'src/modules/motorcycle_courier/entities/motorcycle_courier.entity';
 import { Client } from 'src/modules/client/entities/client.entity';
@@ -8,13 +8,31 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'int', nullable: true })
+  productIndex: number;
+
+  @Column({ nullable: true })
   clientId: string;
 
-  @Column()
+  @Column({ nullable: true })
   paymentMethod: string;
 
-  @Column()
+  @Column({ nullable: true })
+  date: string;
+
+  @Column({ nullable: true })
+  clientName: string;
+
+  @Column({ nullable: true })
+  status: string;
+
+  @Column({ nullable: true })
+  type: string;
+
+  @Column({ nullable: true })
+  amountPaid: number;
+
+  @Column({ nullable: true })
   motorcycleCourierId: string;
 
   @ManyToOne(() => Client, { eager: true })

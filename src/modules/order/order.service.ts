@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
-import { Repository } from 'typeorm';
+import { Or, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AcaiService } from '../acai/acai.service';
 import { MilkShakeService } from '../milk-shake/milk-shake.service';
@@ -18,6 +18,9 @@ import { CreatePopsicleOrderDto } from '../popsicle-order/dto/create-popsicle-or
 import { PopsicleOrderService } from '../popsicle-order/popsicle-order.service';
 import { OrderProduct } from './entities/order-product.entity';
 import { OrderDto } from './dto/order.dto';
+import { OrderStatus } from './enums/order-status';
+import { ClientService } from '../client/client.service';
+import { getOrderTypeFromString } from './enums/order-type';
 
 @Injectable()
 export class OrderService {
@@ -32,13 +35,34 @@ export class OrderService {
     private readonly drinkService: DrinkOrderService,
     private readonly iceCreamService: IceCreamOrderService,
     private readonly iceCreamPotService: IceCreamPotOrderService,
+    private readonly clientService: ClientService,
   ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     const order = new Order();
+    if (createOrderDto.client) {
+      const client = await this.clientService.create(createOrderDto.client);
+      order.client = client;
+    }
+    if (createOrderDto.clientName) {
+      order.clientName = createOrderDto.clientName;
+    }
     order.clientId = createOrderDto.clientId;
     order.paymentMethod = createOrderDto.paymentMethod;
     order.motorcycleCourierId = createOrderDto.motorcycleCourierId;
+    order.date = new Date().toISOString();
+    order.status = OrderStatus.Pending;
+    order.amountPaid = 0;
+    order.type = getOrderTypeFromString(createOrderDto.type);
+
+    const lastOrder = await this.orderRepository.findOne({
+      where: {},
+      order: { productIndex: 'DESC' },
+    });
+    const productIndex = lastOrder ? lastOrder.productIndex + 1 : 1;
+
+    order.productIndex = productIndex;
+
 
     const products = [];
 

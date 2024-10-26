@@ -13,10 +13,9 @@ export class PopsicleOrderService {
   ) { }
 
   create(createPopsicleOrderDto: CreatePopsicleOrderDto) {
-    const { popsicleId, quantity, withSyrup } = createPopsicleOrderDto;
+    const { popsicleId, withSyrup } = createPopsicleOrderDto;
     const popsicleOrder = this.popsicleOrderRepository.create({
       popsicleId,
-      quantity,
       withSyrup,
     });
     return this.popsicleOrderRepository.save(popsicleOrder);

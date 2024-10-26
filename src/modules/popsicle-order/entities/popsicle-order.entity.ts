@@ -10,9 +10,6 @@ export class PopsicleOrder {
   popsicleId: string;
 
   @Column()
-  quantity: number;
-
-  @Column()
   withSyrup: boolean;
 
   @ManyToOne(() => Popsicle, { eager: true })

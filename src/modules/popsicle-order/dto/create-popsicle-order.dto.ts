@@ -5,10 +5,6 @@ export class CreatePopsicleOrderDto {
   @IsNotEmpty()
   popsicleId: string;
 
-  @IsNumber()
-  @IsNotEmpty()
-  quantity: number;
-
   @IsNotEmpty()
   @IsBoolean()
   withSyrup: boolean;

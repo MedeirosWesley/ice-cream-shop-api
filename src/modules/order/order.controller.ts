@@ -4,14 +4,17 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PrinterService } from '../printer/printer.service';
 import { OrderDto } from './dto/order.dto';
+import { Or } from 'typeorm';
 
 @Controller('order')
 export class OrderController {
   constructor(private readonly orderService: OrderService, private readonly printService: PrinterService) { }
 
   @Post()
-  create(@Body() createOrderDto: CreateOrderDto) {
-    return this.orderService.create(createOrderDto);
+  async create(@Body() createOrderDto: CreateOrderDto) {
+    const order = await this.orderService.create(createOrderDto);
+    await this.printService.printOrder(OrderDto.fromEntity(await this.orderService.findOne(order.id)));
+    return order;
   }
 
   @Get()

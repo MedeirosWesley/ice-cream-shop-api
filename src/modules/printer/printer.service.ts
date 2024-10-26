@@ -9,6 +9,7 @@ import { PopsicleDto } from '../popsicle/dto/popsicle.dto';
 import { PopsicleOrderDto } from '../popsicle-order/dto/popsicle-order.dto';
 import { DrinkOrderDto } from '../drink-order/dto/drink-order.dto';
 import { IceCreamOrderDto } from '../ice-cream-order/dto/ice-cream-order.dto';
+import { Client } from '../client/entities/client.entity';
 
 
 @Injectable()
@@ -21,22 +22,28 @@ export class PrinterService {
           case 'acai':
 
             const acai = item.product as AcaiDto;
-            let acaiprintItem = `${item.quantity}x Açaí ${acai.size.size.toFixed(0)} .......... R$${acai.size.price.toFixed(2)}`;
+
+            let acaiprintItem = '';
+
+            const name = `${item.quantity} x Açaí ${acai.size.size.toFixed(0)}`
+            const price = `R$${(item.quantity * acai.size.price).toFixed(2)}`;
+            acaiprintItem += `${name} ${'.'.repeat(45 - name.length - price.length)} ${price}`;
 
             acai.additionals.forEach(additional => {
-              const name = `${additional.quantity}x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
-              const price = `R$${(item.quantity * additional.additional.price).toFixed(2)}`;
+              const name = `${additional.quantity} x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
+              const price = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}${(additional.quantity * additional.additional.price).toFixed(2)}`;
 
-              const dots = '.'.repeat(35 - name.length - price.length);  // Ajuste o número 30 conforme necessário
+              const dots = '.'.repeat(37 - name.length - price.length);  // Ajuste o número 30 conforme necessário
               acaiprintItem += `\n\t${name} ${dots} ${price}`;
             });
+            if (item.observation) acaiprintItem += `\nObservação: ${item.observation}`;
             return acaiprintItem;
           case 'milk_shake':
             const milkShake = item.product as MilkShakeDto;
             let milkShakePrintItem = `${item.quantity}x Milk Shake ${milkShake.size.size.toFixed(0)} .......... R$${(item.quantity * milkShake.size.price).toFixed(2)}`;
             milkShake.additionals.forEach(additional => {
               const name = `${additional.quantity}x ${additional.additional.name}`;
-              const price = `R$${additional.additional.price.toFixed(2)}`;
+              const price = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}  ${(additional.quantity * additional.additional.price).toFixed(2)}`;
 
               const dots = '.'.repeat(30 - name.length - price.length);  // Ajuste o número 30 conforme necessário
               milkShakePrintItem += `\n\t${name} ${dots} ${price}`;
@@ -70,8 +77,90 @@ export class PrinterService {
           default:
             return '';
         }
-      }).join('\n');
+      }).join(`\n\n/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\n\n`);
     }
+
+    function formatDateTime(date: string) {
+      const dateObj = new Date(date);
+      const day = dateObj.getDate().toString().padStart(2, '0');
+      const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+      const year = dateObj.getFullYear().toString();
+      const hours = dateObj.getHours().toString().padStart(2, '0');
+      const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    }
+
+    function formatPaymentMethod(paymentMethod: string) {
+      switch (paymentMethod) {
+        case 'money':
+          return 'Dinheiro';
+        case 'credit_card':
+          return 'Cartão';
+        case 'pix':
+          return 'PIX';
+        default:
+          return '';
+      }
+    }
+
+    function formatClient(clientName: string, client: any) {
+      let printClient = '';
+      if (clientName) {
+        printClient += `Cliente: ${clientName}`;
+      }
+      if (client) {
+        printClient += `Cliente: ${client.name}\n`;
+        printClient += `Telefone: ${client.phone}\n`;
+        printClient += `Endereço: ${client.street}, ${client.houseNumber} - ${client.neighborhood}\n`;
+        if (client.reference) {
+          printClient += `Referência: ${client.reference}\n`;
+        }
+      }
+      return printClient;
+    }
+
+
+    function getTotal(items: ProductOrderDto[]): number {
+      let total = 0;
+      items.forEach(item => {
+        switch (item.productType) {
+          case 'acai':
+            const acai = item.product as AcaiDto;
+            total += item.quantity * acai.size.price;
+            acai.additionals.forEach(additional => {
+              total += item.quantity * (additional.additional.price * additional.quantity);
+            });
+            break;
+          case 'milk_shake':
+            const milkShake = item.product as MilkShakeDto;
+            total += item.quantity * milkShake.size.price;
+            milkShake.additionals.forEach(additional => {
+              total += item.quantity * (additional.additional.price * additional.quantity);
+            });
+            break;
+          case 'popsicle':
+            const popsicle = item.product as PopsicleOrderDto;
+            total += item.quantity * popsicle.popsicle.price;
+            break;
+          case 'drink':
+            const drink = item.product as DrinkOrderDto;
+            total += item.quantity * drink.drink.price;
+            break;
+          case 'ice_cream':
+            const iceCream = item.product as IceCreamOrderDto;
+            total += item.quantity * iceCream.price;
+            break;
+          case 'ice_cream_pot':
+            const iceCreamPot = item.product as IceCreamOrderDto;
+            total += item.quantity * iceCreamPot.price;
+            break;
+          default:
+            break;
+        }
+      });
+      return total
+    }
+
     try {
       const device = await escposUSB.getDevice();
 
@@ -92,19 +181,30 @@ export class PrinterService {
 
 
       await printer
+        .drawLine()
         .align('CT')
+        .style('B')
         .text('Kimolek')
+        .style('NORMAL')
+        .feed(1)
+        .text('---------- Ordem de Pedido ---------')
+        .feed(1)
         .align('LT')
-        .text('---- Ordem de Pedido ----')
-        .text(`Número do Pedido: ${orderDetails.id}`)
-        .text(`Cliente: ${orderDetails.client.name}`)
-        .text('----------------------------')
+        .font('A')
+        .text(`Número do Pedido: ${orderDetails.productId}`)
+        .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
+        .text(formatClient(orderDetails.clientName, orderDetails.client))
+        .drawLine()
+        .feed(1)
         .text(formatItems(orderDetails.products))  // Lista os itens
-        .text('----------------------------')
-        .text(`Total: R$${orderDetails}`)
-        .text(`Data: ${orderDetails}`)
-        .text('----------------------------')
-        .cut()  // Cortar o papel
+        .feed(1)
+        .drawLine()
+        .align('RT')
+        .feed(1)
+        .text(`Total: R$${getTotal(orderDetails.products).toFixed(2)}`)
+        .drawLine()
+        .feed(1)
+        .cut()
         .close();
 
       console.log('Impressão concluída com sucesso');
