@@ -21,6 +21,10 @@ import { OrderDto } from './dto/order.dto';
 import { OrderStatus } from './enums/order-status';
 import { ClientService } from '../client/client.service';
 import { getOrderTypeFromString } from './enums/order-type';
+import { OnSaleAcaiOrderService } from '../on-sale-acai-order/on-sale-acai-order.service';
+import { CreateOnSaleAcaiOrderDto } from '../on-sale-acai-order/dto/create-on-sale-acai-order.dto';
+import { OtherProductOrderService } from '../other-product-order/other-product-order.service';
+import { CreateOtherProductOrderDto } from '../other-product-order/dto/create-other-product-order.dto';
 
 @Injectable()
 export class OrderService {
@@ -36,6 +40,8 @@ export class OrderService {
     private readonly iceCreamService: IceCreamOrderService,
     private readonly iceCreamPotService: IceCreamPotOrderService,
     private readonly clientService: ClientService,
+    private readonly onSaleAcaiOrderService: OnSaleAcaiOrderService,
+    private readonly outherProductOrderService: OtherProductOrderService,
   ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -103,6 +109,16 @@ export class OrderService {
           orderProduct.popsicle = popsicle;
           products.push(orderProduct);
           break;
+        case 'on_sale_acai':
+          const onSaleAcai = await this.onSaleAcaiOrderService.create(product.details as CreateOnSaleAcaiOrderDto);
+          orderProduct.onSaleAcaiOrder = onSaleAcai;
+          products.push(orderProduct);
+          break;
+        case 'other_product':
+          const otherProduct = await this.outherProductOrderService.create(product.details as CreateOtherProductOrderDto);
+          orderProduct.otherProductOrder = otherProduct;
+          products.push(orderProduct);
+          break;
         default:
           throw new BadRequestException(`Invalid product type ${product}`);
       }
@@ -115,7 +131,7 @@ export class OrderService {
 
   async findAll() {
     const data = await this.orderRepository.find({
-      relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.milkShake.additionals', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client'],
+      relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.milkShake.additionals', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client', 'products.onSaleAcaiOrder', 'products.onSaleAcaiOrder.additionalExtra', 'products.onSaleAcaiOrder.additionalRemoved'],
     });
 
     return data.map(order => new OrderDto(order));
@@ -138,6 +154,9 @@ export class OrderService {
     order.clientId = updateOrderDto.clientId;
     order.paymentMethod = updateOrderDto.paymentMethod;
     order.motorcycleCourierId = updateOrderDto.motorcycleCourierId;
+    order.amountPaid = updateOrderDto.amountPaid;
+    order.status = updateOrderDto.status;
+    order.type = getOrderTypeFromString(updateOrderDto.type);
 
     if (updateOrderDto.products) {
       const products = [];
@@ -177,6 +196,16 @@ export class OrderService {
           case 'popsicle':
             const popsicle = await this.popsicleService.create(product.details as CreatePopsicleOrderDto);
             orderProduct.popsicle = popsicle;
+            products.push(orderProduct);
+            break;
+          case 'on_sale_acai':
+            const onSaleAcai = await this.onSaleAcaiOrderService.create(product.details as CreateOnSaleAcaiOrderDto);
+            orderProduct.onSaleAcaiOrder = onSaleAcai;
+            products.push(orderProduct);
+            break;
+          case 'other_product':
+            const otherProduct = await this.outherProductOrderService.create(product.details as CreateOtherProductOrderDto);
+            orderProduct.otherProductOrder = otherProduct;
             products.push(orderProduct);
             break;
           default:

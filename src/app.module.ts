@@ -19,6 +19,9 @@ import { IceCreamOrderModule } from './modules/ice-cream-order/ice-cream-order.m
 import { PrinterModule } from './modules/printer/printer.module';
 import { IceCreamPotOrderModule } from './modules/ice-cream-pot-order/ice-cream-pot-order.module';
 import { OnSaleAcaiModule } from './modules/on-sale-acai/on-sale-acai.module';
+import { OnSaleAcaiOrderModule } from './modules/on-sale-acai-order/on-sale-acai-order.module';
+import { OtherProductModule } from './modules/other-product/other-product.module';
+import { OtherProductOrderModule } from './modules/other-product-order/other-product-order.module';
 
 @Module({
   imports: [
@@ -40,6 +43,9 @@ import { OnSaleAcaiModule } from './modules/on-sale-acai/on-sale-acai.module';
     PrinterModule,
     IceCreamPotOrderModule,
     OnSaleAcaiModule,
+    OnSaleAcaiOrderModule,
+    OtherProductModule,
+    OtherProductOrderModule,
   ],
   controllers: [AppController],
   providers: [AppService],

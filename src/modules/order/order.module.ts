@@ -13,9 +13,11 @@ import { PopsicleOrderModule } from '../popsicle-order/popsicle-order.module';
 import { DrinkOrderModule } from '../drink-order/drink-order.module';
 import { OrderProduct } from './entities/order-product.entity';
 import { ClientModule } from '../client/client.module';
+import { OnSaleAcaiOrderModule } from '../on-sale-acai-order/on-sale-acai-order.module';
+import { OtherProductOrderModule } from '../other-product-order/other-product-order.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, OrderProduct]), AcaiModule, MilkShakeModule, IceCreamOrderModule, IceCreamPotOrderModule, PopsicleOrderModule, DrinkOrderModule, PrinterModule, ClientModule],
+  imports: [TypeOrmModule.forFeature([Order, OrderProduct]), AcaiModule, MilkShakeModule, IceCreamOrderModule, IceCreamPotOrderModule, PopsicleOrderModule, DrinkOrderModule, PrinterModule, ClientModule, OnSaleAcaiOrderModule, OtherProductOrderModule],
   controllers: [OrderController],
   providers: [OrderService],
 })

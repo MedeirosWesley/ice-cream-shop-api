@@ -6,6 +6,8 @@ import { IceCreamPotOrder } from 'src/modules/ice-cream-pot-order/entities/ice-c
 import { PopsicleOrder } from 'src/modules/popsicle-order/entities/popsicle-order.entity';
 import { DrinkOrder } from 'src/modules/drink-order/entities/drink-order.entity';
 import { Order } from './order.entity';
+import { OnSaleAcaiOrder } from 'src/modules/on-sale-acai-order/entities/on-sale-acai-order.entity';
+import { OtherProductOrder } from 'src/modules/other-product-order/entities/other-product-order.entity';
 
 @Entity()
 export class OrderProduct {
@@ -41,4 +43,10 @@ export class OrderProduct {
 
   @ManyToOne(() => IceCreamPotOrder, { nullable: true })
   iceCreamPot: IceCreamPotOrder;
+
+  @ManyToOne(() => OnSaleAcaiOrder, { nullable: true })
+  onSaleAcaiOrder: OnSaleAcaiOrder;
+
+  @ManyToOne(() => OtherProductOrder, { nullable: true })
+  otherProductOrder: OtherProductOrder;
 }

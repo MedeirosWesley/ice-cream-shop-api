@@ -1,4 +1,4 @@
-import { IsArray, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
+import { IsArray, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
 import { OrderProduct } from "../entities/order-product.entity";
 import { Type } from "class-transformer";
 import { CreateOrderProduct } from "./create-order-product.dto";
@@ -30,6 +30,13 @@ export class CreateOrderDto {
   @IsUUID()
   motorcycleCourierId: string;
 
+  @IsOptional()
+  @IsNumber()
+  amountPaid: number;
+
+  @IsOptional()
+  @IsString()
+  status: string;
 
   @IsArray()
   @ValidateNested({ each: true })
