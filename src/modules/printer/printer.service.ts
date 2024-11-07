@@ -10,6 +10,9 @@ import { PopsicleOrderDto } from '../popsicle-order/dto/popsicle-order.dto';
 import { DrinkOrderDto } from '../drink-order/dto/drink-order.dto';
 import { IceCreamOrderDto } from '../ice-cream-order/dto/ice-cream-order.dto';
 import { Client } from '../client/entities/client.entity';
+import { OnSaleAcai } from '../on-sale-acai/entities/on-sale-acai.entity';
+import { OnSaleAcaiOrder } from '../on-sale-acai-order/entities/on-sale-acai-order.entity';
+import { OtherProductOrder } from '../other-product-order/entities/other-product-order.entity';
 
 
 @Injectable()
@@ -85,6 +88,46 @@ export class PrinterService {
               });
             }
             return iceCreamPotPrintItem;
+          case 'on_sale_acai':
+            const onSaleAcai = item.product as OnSaleAcaiOrder;
+
+            let onSaleAcaiPrintItem = '';
+
+            const onSaleAcaiName = `${item.quantity}x Açaí PROMOÇÃO ${onSaleAcai.onSaleAcai.size.size.toFixed(0)}`;
+            const onSaleAcaiPrice = `R$${(item.quantity * onSaleAcai.onSaleAcai.price).toFixed(2)}`;
+            onSaleAcaiPrintItem += `${onSaleAcaiName} ${'.'.repeat(45 - onSaleAcaiName.length - onSaleAcaiPrice.length)} ${onSaleAcaiPrice}`;
+            const additionalRemoved = new Set(onSaleAcai.additionalRemoved.map(item => item.additional.id));
+            const additionals = onSaleAcai.onSaleAcai.additionals.filter(additional => additionalRemoved.has(additional.additional.id));
+            const additionalsNotRemoved = onSaleAcai.onSaleAcai.additionals.filter(additional => !additionalRemoved.has(additional.additional.id));
+
+            additionalsNotRemoved.forEach(additional => {
+              const name = `1 x ${additional.additional.name}`;
+              const price = `-`;
+
+              const dots = '.'.repeat(37 - name.length - price.length);
+              acaiprintItem += `\n\t${name} ${dots} ${price}`;
+
+            });
+
+            acaiprintItem += '.'.repeat(37);
+            acaiprintItem += '\n\tAdicionais Extras:\n';
+
+            onSaleAcai.additionalExtra.forEach(additional => {
+              const onSaleAcaiName = `${additional.quantity} x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
+              const onSaleAcaiPrice = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}${(additional.quantity * additional.additional.price).toFixed(2)}`;
+
+              const dots = '.'.repeat(37 - onSaleAcaiName.length - onSaleAcaiPrice.length);
+              onSaleAcaiPrintItem += `\n\t${onSaleAcaiName} ${dots} ${onSaleAcaiPrice}`;
+            });
+            return onSaleAcaiPrintItem;
+
+          case 'other_product':
+            const otherProduct = item.product as OtherProductOrder;
+            let otherProductPrintItem = '';
+            const otherProductName = `${item.quantity}x ${otherProduct.otherProduct.name}`;
+            const otherProductPrice = `R$${(item.quantity * otherProduct.otherProduct.price).toFixed(2)}`;
+            otherProductPrintItem += `${otherProductName} ${'.'.repeat(45 - otherProductName.length - otherProductPrice.length)} ${otherProductPrice}`;
+            return otherProductPrintItem;
           default:
             return '';
         }
@@ -165,6 +208,12 @@ export class PrinterService {
             const iceCreamPot = item.product as IceCreamOrderDto;
             total += item.quantity * iceCreamPot.price;
             break;
+          case 'on_sale_acai':
+            const onSaleAcai = item.product as OnSaleAcaiOrder;
+            total += item.quantity * (onSaleAcai.onSaleAcai.price + onSaleAcai.additionalExtra.reduce((acc, additional) => acc + additional.additional.price * additional.additional.price, 0));
+          case 'other_product':
+            const otherProduct = item.product as OtherProductOrder;
+            total += item.quantity * otherProduct.otherProduct.price;
           default:
             break;
         }
