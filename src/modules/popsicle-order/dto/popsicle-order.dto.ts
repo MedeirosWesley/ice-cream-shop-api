@@ -9,6 +9,9 @@ export class PopsicleOrderDto {
   popsicleId: string;
 
   @Expose()
+  popsicleQuantity: number;
+
+  @Expose()
   withSyrup: boolean;
 
   @Type(() => PopsicleDto)

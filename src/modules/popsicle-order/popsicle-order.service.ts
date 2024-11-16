@@ -32,24 +32,30 @@ export class PopsicleOrderService {
   }
 
   findAll() {
-    return this.popsicleOrderRepository.find({
-      relations: ['popsicle'],
+    return this.popsiclesOrderRepository.find({
+      relations: [
+        'popsicles', // Relacionamento com PopsicleOrder
+        'popsicles.popsicle', // Relacionamento com Popsicle na PopsicleOrder
+      ],
     });
   }
 
   findOne(id: string) {
-    return this.popsicleOrderRepository.findOne({
+    return this.popsiclesOrderRepository.findOne({
       where: { id },
-      relations: ['popsicle'],
+      relations: [
+        'popsicles', // Relacionamento com PopsicleOrder
+        'popsicles.popsicle', // Relacionamento com Popsicle na PopsicleOrder
+      ],
     });
   }
 
-  update(id: string, updatePopsicleOrderDto: UpdatePopsicleOrderDto) {
-    return this.popsicleOrderRepository.update(id, updatePopsicleOrderDto);
+  update(id: string, updatePopsiclesOrderDto: UpdatePopsicleOrderDto) {
+    return this.popsiclesOrderRepository.update(id, updatePopsiclesOrderDto);
   }
 
   remove(id: string) {
-    return this.popsicleOrderRepository.delete(id);
+    return this.popsiclesOrderRepository.delete(id);
   }
 
 }

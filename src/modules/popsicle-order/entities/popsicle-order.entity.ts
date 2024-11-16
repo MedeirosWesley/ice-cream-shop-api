@@ -11,14 +11,16 @@ export class PopsicleOrder {
   popsicleId: string;
 
   @Column()
+  popsicleQuantity: number;
+
+  @Column()
   withSyrup: boolean;
 
-  @ManyToOne(() => PopsiclesOrder, popsicle => popsicle.popsicles, { onDelete: 'CASCADE' })
+  @ManyToOne(() => PopsiclesOrder, popsiclesOrder => popsiclesOrder.popsicles, { onDelete: 'CASCADE' })
   @JoinColumn()
-  popsicles: PopsiclesOrder;
+  popsiclesOrder: PopsiclesOrder; // Alterado para ser mais claro
 
   @ManyToOne(() => Popsicle, { eager: true })
   @JoinColumn()
   popsicle: Popsicle;
-
 }

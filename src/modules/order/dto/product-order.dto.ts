@@ -6,6 +6,7 @@ import { MilkShakeDto } from "src/modules/milk-shake/dto/milk-shake.dto";
 import { OnSaleAcaiOrder } from "src/modules/on-sale-acai-order/entities/on-sale-acai-order.entity";
 import { OtherProductOrder } from "src/modules/other-product-order/entities/other-product-order.entity";
 import { PopsiclesOrderDto } from "src/modules/popsicle-order/dto/popsicles-order.dto";
+import { PopsiclesOrder } from "src/modules/popsicle-order/entities/popsicles-order.entity";
 
 export class ProductOrderDto {
   id: string;
@@ -20,7 +21,6 @@ export class ProductOrderDto {
     this.observation = orderProduct.observation;
     this.productType = orderProduct.productType;
 
-    // Definir o campo `product` baseado no tipo de produto
     switch (orderProduct.productType) {
       case 'acai':
         this.product = orderProduct.acai;
@@ -30,6 +30,7 @@ export class ProductOrderDto {
         break;
       case 'popsicle':
         this.product = orderProduct.popsicle;
+
         break;
       case 'drink':
         this.product = orderProduct.drink;

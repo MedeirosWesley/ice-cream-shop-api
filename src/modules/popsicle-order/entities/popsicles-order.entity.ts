@@ -7,7 +7,6 @@ export class PopsiclesOrder {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @OneToMany(() => PopsicleOrder, popsicle => popsicle.popsicles, { cascade: true, eager: true })
+  @OneToMany(() => PopsicleOrder, popsicleOrder => popsicleOrder.popsiclesOrder, { cascade: true, eager: true })
   popsicles: PopsicleOrder[];
-
 }

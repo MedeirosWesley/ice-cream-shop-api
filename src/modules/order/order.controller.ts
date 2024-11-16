@@ -13,6 +13,7 @@ export class OrderController {
   @Post()
   async create(@Body() createOrderDto: CreateOrderDto) {
     const order = await this.orderService.create(createOrderDto);
+
     await this.printService.printOrder(OrderDto.fromEntity(await this.orderService.findOne(order.id)));
     return order;
   }

@@ -125,22 +125,40 @@ export class OrderService {
     }
 
     order.products = products;
-
     return this.orderRepository.save(order);
   }
 
   async findAll() {
     const data = await this.orderRepository.find({
-      relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.milkShake.additionals', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client', 'products.onSaleAcaiOrder', 'products.onSaleAcaiOrder.additionalExtra', 'products.onSaleAcaiOrder.additionalRemoved'],
+      relations: [
+        'products',
+        'products.popsicle',
+        'products.popsicle.popsicles',
+        'products.popsicle.popsicles.popsicle',
+        'products.acai',
+        'products.acai.additionals',
+        'products.milkShake',
+        'products.milkShake.flavors',
+        'products.milkShake.syrup',
+        'products.milkShake.additionals',
+        'products.drink',
+        'products.iceCream',
+        'products.iceCreamPot',
+        'motorcycleCourier',
+        'client',
+        'products.onSaleAcaiOrder',
+        'products.onSaleAcaiOrder.additionalExtra',
+        'products.onSaleAcaiOrder.additionalRemoved',
+        'products.otherProductOrder',
+      ],
     });
-
     return data.map(order => new OrderDto(order));
   }
 
   findOne(id: string) {
     return this.orderRepository.findOne({
       where: { id },
-      relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.milkShake.additionals', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client'],
+      relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.milkShake.flavors', 'products.milkShake.syrup', 'products.milkShake.additionals', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client', 'products.onSaleAcaiOrder', 'products.onSaleAcaiOrder.additionalExtra', 'products.onSaleAcaiOrder.additionalRemoved', 'products.otherProductOrder', 'products.popsicle.popsicles',],
     });
   }
 

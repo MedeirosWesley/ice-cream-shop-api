@@ -33,7 +33,7 @@ export class OrderProduct {
   @ManyToOne(() => MilkShake, { nullable: true })
   milkShake: MilkShake;
 
-  @ManyToOne(() => PopsiclesOrder, { nullable: true })
+  @ManyToOne(() => PopsiclesOrder, popsicle => popsicle.popsicles, { nullable: true })
   popsicle: PopsiclesOrder;
 
   @ManyToOne(() => DrinkOrder, { nullable: true })

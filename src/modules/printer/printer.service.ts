@@ -13,6 +13,8 @@ import { Client } from '../client/entities/client.entity';
 import { OnSaleAcai } from '../on-sale-acai/entities/on-sale-acai.entity';
 import { OnSaleAcaiOrder } from '../on-sale-acai-order/entities/on-sale-acai-order.entity';
 import { OtherProductOrder } from '../other-product-order/entities/other-product-order.entity';
+import { PopsiclesOrderDto } from '../popsicle-order/dto/popsicles-order.dto';
+import { IceCreamPotOrder } from '../ice-cream-pot-order/entities/ice-cream-pot-order.entity';
 
 
 @Injectable()
@@ -48,13 +50,25 @@ export class PrinterService {
             let milkShakePrintItem = '';
             let milkShakename = `${item.quantity}x Milk Shake ${milkShake.size.size.toFixed(0)}`;
             let milkShakePrice = `${(item.quantity * milkShake.size.price) < 10 ? `R$ ` : `R$`}${(item.quantity * milkShake.size.price).toFixed(2)}`;
-            const milkDots = '.'.repeat(45 - milkShakename.length - milkShakePrice.length);
+            const milkDots = '.'.repeat(44 - milkShakename.length - milkShakePrice.length);
+
 
             milkShakePrintItem += `${milkShakename} ${milkDots} ${milkShakePrice}`;
+
+            milkShakePrintItem += `\n  Sabores:`;
+
+
+            milkShake.flavors.forEach(flavor => {
+              milkShakePrintItem += `\n    ${flavor.iceCreamFlavor.name}`;
+            });
+
+            if (milkShake.syrup) {
+              milkShakePrintItem += `\n  Calda: ${milkShake.syrup.name}`;
+            }
+
             milkShake.additionals.forEach(additional => {
               const name = `${additional.quantity}x ${additional.additional.name}`;
               const price = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}  ${(additional.quantity * additional.additional.price).toFixed(2)}`;
-
               const dots = '.'.repeat(37 - name.length - price.length);  // Ajuste o número 30 conforme necessário
               milkShakePrintItem += `\n\t${name} ${dots} ${price}`;
             });
@@ -64,9 +78,14 @@ export class PrinterService {
 
             return milkShakePrintItem;
           case 'popsicle':
-            const popsicle = item.product as PopsicleOrderDto;
-            let popsiclePrintItem = `${item.quantity}x Picolé`
-            popsiclePrintItem += `\n\t${popsicle.popsicle.name} .......... R$${(item.quantity * popsicle.popsicle.price).toFixed(2)}`;
+            const popsicles = (item.product as PopsiclesOrderDto).popsicles;
+            let popsiclePrintItem = `Picolé`
+            popsicles.forEach(popsicle => {
+              const name = `${popsicle.popsicleQuantity}x ${popsicle.popsicle.name}`;
+              const price = `${(popsicle.popsicleQuantity * popsicle.popsicle.price).toFixed(2)}`;
+              popsiclePrintItem += `\n${name} ${'.'.repeat(45 - name.length - price.length)} ${price}`;
+            });
+            return popsiclePrintItem;
           case 'drink':
             const drink = item.product as DrinkOrderDto;
             return `${item.quantity}x ${drink.drink.name} .......... R$${(item.quantity * drink.drink.price).toFixed(2)}`;
@@ -80,13 +99,13 @@ export class PrinterService {
             }
             return iceCreamPrintItem;
           case 'ice_cream_pot':
-            const iceCreamPot = item.product as IceCreamOrderDto;
-            let iceCreamPotPrintItem = `${item.quantity}x Pote de Sorvete ${iceCreamPot.price.toFixed(2)}`;
-            if (iceCreamPot.flavors.length !== 0) {
-              iceCreamPot.flavors.forEach(flavor => {
-                iceCreamPotPrintItem += `\n\t${flavor.iceCreamFlavor.name}`;
-              });
-            }
+            const iceCreamPot = item.product as IceCreamPotOrder;
+            let iceCreamPotPrintItem = '';
+            const iceCreamPotName = `${item.quantity}x Pote de Sorvete ${iceCreamPot.size.size} ml`;
+            const iceCreamPotPrice = `R$${(item.quantity * iceCreamPot.size.price).toFixed(2)}`;
+            iceCreamPotPrintItem += `${iceCreamPotName} ${'.'.repeat(45 - iceCreamPotName.length - iceCreamPotPrice.length)} ${iceCreamPotPrice}`;
+            iceCreamPotPrintItem += `\n  Sabor: ${iceCreamPot.flavor.name}`;
+            iceCreamPotPrintItem += `\n\n${' '.repeat(37 - iceCreamPotPrice.length)}Subtotal: ${iceCreamPotPrice}`
             return iceCreamPotPrintItem;
           case 'on_sale_acai':
             const onSaleAcai = item.product as OnSaleAcaiOrder;
@@ -193,8 +212,8 @@ export class PrinterService {
             });
             break;
           case 'popsicle':
-            const popsicle = item.product as PopsicleOrderDto;
-            total += item.quantity * popsicle.popsicle.price;
+            const popsicle = item.product as PopsiclesOrderDto;
+            total += item.quantity * (popsicle.popsicles.reduce((acc, popsicle) => acc + (popsicle.popsicleQuantity * popsicle.popsicle.price), 0));
             break;
           case 'drink':
             const drink = item.product as DrinkOrderDto;
@@ -254,7 +273,6 @@ export class PrinterService {
         .text(`Número do Pedido: ${orderDetails.productId}`)
         .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
         .text(formatClient(orderDetails.clientName, orderDetails.client))
-        .align('CT')
         .drawLine()
         .feed(1)
         .text(formatItems(orderDetails.products))  // Lista os itens
@@ -264,6 +282,7 @@ export class PrinterService {
         .drawLine()
         .feed(1)
         .cut()
+        .flush()
         .close();
 
     } catch (error) {

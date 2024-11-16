@@ -4,6 +4,7 @@ import { CreatePopsicleOrderDto, CreatePopsiclesOrderDto } from './dto/create-po
 import { UpdatePopsicleOrderDto } from './dto/update-popsicle-order.dto';
 import { plainToInstance } from 'class-transformer';
 import { PopsicleOrderDto } from './dto/popsicle-order.dto';
+import { PopsiclesOrderDto } from './dto/popsicles-order.dto';
 
 @Controller('popsicle-order')
 export class PopsicleOrderController {
@@ -11,22 +12,22 @@ export class PopsicleOrderController {
 
   @Post()
   create(@Body() createPopsicleOrderDto: CreatePopsiclesOrderDto) {
-    return plainToInstance(PopsicleOrderDto, this.popsicleOrderService.create(createPopsicleOrderDto), { excludeExtraneousValues: true });
+    return this.popsicleOrderService.create(createPopsicleOrderDto);
   }
 
   @Get()
   findAll() {
-    return plainToInstance(PopsicleOrderDto, this.popsicleOrderService.findAll(), { excludeExtraneousValues: true });
+    return this.popsicleOrderService.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return plainToInstance(PopsicleOrderDto, this.popsicleOrderService.findOne(id), { excludeExtraneousValues: true });
+    return this.popsicleOrderService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updatePopsicleOrderDto: UpdatePopsicleOrderDto) {
-    return plainToInstance(PopsicleOrderDto, this.popsicleOrderService.update(id, updatePopsicleOrderDto), { excludeExtraneousValues: true });
+    return this.popsicleOrderService.update(id, updatePopsicleOrderDto);
   }
 
   @Delete(':id')
