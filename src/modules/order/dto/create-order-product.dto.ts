@@ -9,6 +9,7 @@ import { CreatePopsicleDto } from 'src/modules/popsicle/dto/create-popsicle.dto'
 import { CreateProductDto } from './product.dto';
 import { CreateOnSaleAcaiOrderDto } from 'src/modules/on-sale-acai-order/dto/create-on-sale-acai-order.dto';
 import { CreateOtherProductOrderDto } from 'src/modules/other-product-order/dto/create-other-product-order.dto';
+import { CreatePopsiclesOrderDto } from 'src/modules/popsicle-order/dto/create-popsicle-order.dto';
 
 // Validação personalizada para determinar o tipo de produto e fazer a validação correspondente
 @ValidatorConstraint({ name: 'isProductValid', async: false })
@@ -26,7 +27,7 @@ class IsProductValidConstraint implements ValidatorConstraintInterface {
       case 'ice_cream_pot':
         return this.validateProduct(product.details, CreateIceCreamPotOrderDto);
       case 'popsicle':
-        return this.validateProduct(product.details, CreatePopsicleDto);
+        return this.validateProduct(product.details, CreatePopsiclesOrderDto);
       case 'on_sale_acai':
         return this.validateProduct(product.details, CreateOnSaleAcaiOrderDto);
       case 'other_product':

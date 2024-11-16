@@ -1,20 +1,18 @@
 import { AcaiDto } from "src/modules/acai/dto/acai.dto";
 import { DrinkOrderDto } from "src/modules/drink-order/dto/drink-order.dto";
-import { DrinkDto } from "src/modules/drink/dto/drink.dto";
 import { IceCreamOrderDto } from "src/modules/ice-cream-order/dto/ice-cream-order.dto";
 import { IceCreamPotOrder } from "src/modules/ice-cream-pot-order/entities/ice-cream-pot-order.entity";
 import { MilkShakeDto } from "src/modules/milk-shake/dto/milk-shake.dto";
 import { OnSaleAcaiOrder } from "src/modules/on-sale-acai-order/entities/on-sale-acai-order.entity";
-import { OnSaleAcai } from "src/modules/on-sale-acai/entities/on-sale-acai.entity";
 import { OtherProductOrder } from "src/modules/other-product-order/entities/other-product-order.entity";
-import { PopsicleOrderDto } from "src/modules/popsicle-order/dto/popsicle-order.dto";
+import { PopsiclesOrderDto } from "src/modules/popsicle-order/dto/popsicles-order.dto";
 
 export class ProductOrderDto {
   id: string;
   quantity: number;
   observation?: string;
   productType: string;
-  product: AcaiDto | MilkShakeDto | PopsicleOrderDto | DrinkOrderDto | IceCreamOrderDto | IceCreamPotOrder | OnSaleAcaiOrder | OtherProductOrder | null;
+  product: AcaiDto | MilkShakeDto | PopsiclesOrderDto | DrinkOrderDto | IceCreamOrderDto | IceCreamPotOrder | OnSaleAcaiOrder | OtherProductOrder | null;
 
   constructor(orderProduct: any) {
     this.id = orderProduct.id;

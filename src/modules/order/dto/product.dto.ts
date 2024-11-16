@@ -5,7 +5,7 @@ import { CreateIceCreamPotOrderDto } from "src/modules/ice-cream-pot-order/dto/c
 import { CreateMilkShakeDto } from "src/modules/milk-shake/dto/create-milk-shake.dto";
 import { CreateOnSaleAcaiOrderDto } from "src/modules/on-sale-acai-order/dto/create-on-sale-acai-order.dto";
 import { CreateOtherProductOrderDto } from "src/modules/other-product-order/dto/create-other-product-order.dto";
-import { CreatePopsicleOrderDto } from "src/modules/popsicle-order/dto/create-popsicle-order.dto";
+import { CreatePopsicleOrderDto, CreatePopsiclesOrderDto } from "src/modules/popsicle-order/dto/create-popsicle-order.dto";
 
 export interface Product {
   type: string; // Define o tipo de produto (acai, milk_shake, drink, etc.)
@@ -19,4 +19,4 @@ export type CreateProductDto =
   | { type: 'ice_cream_pot'; details: CreateIceCreamPotOrderDto }
   | { type: 'on_sale_acai'; details: CreateOnSaleAcaiOrderDto }
   | { type: 'other_product'; details: CreateOtherProductOrderDto }
-  | { type: 'popsicle'; details: CreatePopsicleOrderDto };
+  | { type: 'popsicle'; details: CreatePopsiclesOrderDto };

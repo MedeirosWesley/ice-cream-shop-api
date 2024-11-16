@@ -1,5 +1,14 @@
-import { IsBoolean, IsNotEmpty, IsNumber, IsUUID } from "class-validator";
+import { Type } from "class-transformer";
+import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsUUID, ValidateNested } from "class-validator";
 
+export class CreatePopsiclesOrderDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreatePopsicleOrderDto)
+  popsicles: CreatePopsicleOrderDto[];
+
+
+}
 export class CreatePopsicleOrderDto {
   @IsUUID()
   @IsNotEmpty()
@@ -9,3 +18,5 @@ export class CreatePopsicleOrderDto {
   @IsBoolean()
   withSyrup: boolean;
 }
+
+

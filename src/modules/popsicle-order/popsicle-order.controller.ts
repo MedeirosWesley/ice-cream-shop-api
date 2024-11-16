@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { PopsicleOrderService } from './popsicle-order.service';
-import { CreatePopsicleOrderDto } from './dto/create-popsicle-order.dto';
+import { CreatePopsicleOrderDto, CreatePopsiclesOrderDto } from './dto/create-popsicle-order.dto';
 import { UpdatePopsicleOrderDto } from './dto/update-popsicle-order.dto';
 import { plainToInstance } from 'class-transformer';
 import { PopsicleOrderDto } from './dto/popsicle-order.dto';
@@ -10,7 +10,7 @@ export class PopsicleOrderController {
   constructor(private readonly popsicleOrderService: PopsicleOrderService) { }
 
   @Post()
-  create(@Body() createPopsicleOrderDto: CreatePopsicleOrderDto) {
+  create(@Body() createPopsicleOrderDto: CreatePopsiclesOrderDto) {
     return plainToInstance(PopsicleOrderDto, this.popsicleOrderService.create(createPopsicleOrderDto), { excludeExtraneousValues: true });
   }
 

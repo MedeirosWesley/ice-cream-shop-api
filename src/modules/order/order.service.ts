@@ -14,7 +14,7 @@ import { CreateIceCreamOrderDto } from '../ice-cream-order/dto/create-ice-cream-
 import { CreateIceCreamPotOrderDto } from '../ice-cream-pot-order/dto/create-ice-cream-pot-order.dto';
 import { DrinkOrderService } from '../drink-order/drink-order.service';
 import { CreateDrinkOrderDto } from '../drink-order/dto/create-drink-order.dto';
-import { CreatePopsicleOrderDto } from '../popsicle-order/dto/create-popsicle-order.dto';
+import { CreatePopsicleOrderDto, CreatePopsiclesOrderDto } from '../popsicle-order/dto/create-popsicle-order.dto';
 import { PopsicleOrderService } from '../popsicle-order/popsicle-order.service';
 import { OrderProduct } from './entities/order-product.entity';
 import { OrderDto } from './dto/order.dto';
@@ -105,7 +105,7 @@ export class OrderService {
           products.push(orderProduct);
           break;
         case 'popsicle':
-          const popsicle = await this.popsicleService.create(product.details as CreatePopsicleOrderDto);
+          const popsicle = await this.popsicleService.create(product.details as CreatePopsiclesOrderDto);
           orderProduct.popsicle = popsicle;
           products.push(orderProduct);
           break;
@@ -194,7 +194,7 @@ export class OrderService {
             products.push(orderProduct);
             break;
           case 'popsicle':
-            const popsicle = await this.popsicleService.create(product.details as CreatePopsicleOrderDto);
+            const popsicle = await this.popsicleService.create(product.details as CreatePopsiclesOrderDto);
             orderProduct.popsicle = popsicle;
             products.push(orderProduct);
             break;
