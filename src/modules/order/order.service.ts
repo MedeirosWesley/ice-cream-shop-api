@@ -169,12 +169,27 @@ export class OrderService {
       throw new Error(`Order with id ${id} not found`);
     }
 
-    order.clientId = updateOrderDto.clientId;
-    order.paymentMethod = updateOrderDto.paymentMethod;
-    order.motorcycleCourierId = updateOrderDto.motorcycleCourierId;
-    order.amountPaid = updateOrderDto.amountPaid;
-    order.status = updateOrderDto.status;
-    order.type = getOrderTypeFromString(updateOrderDto.type);
+    if (updateOrderDto.clientId !== null) {
+      order.clientId = updateOrderDto.clientId;
+    }
+    if (updateOrderDto.clientName !== null) {
+      order.clientName = updateOrderDto.clientName;
+    }
+    if (updateOrderDto.paymentMethod !== null) {
+      order.paymentMethod = updateOrderDto.paymentMethod;
+    }
+    if (updateOrderDto.motorcycleCourierId !== null) {
+      order.motorcycleCourierId = updateOrderDto.motorcycleCourierId;
+    }
+    if (updateOrderDto.amountPaid !== null) {
+      order.amountPaid = updateOrderDto.amountPaid;
+    }
+    if (updateOrderDto.status !== null) {
+      order.status = updateOrderDto.status;
+    }
+    if (updateOrderDto.type !== null) {
+      order.type = getOrderTypeFromString(updateOrderDto.type);
+    }
 
     if (updateOrderDto.products) {
       const products = [];

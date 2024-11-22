@@ -10,6 +10,6 @@ export function getOrderTypeFromString(type: string): OrderType {
     case 'Store':
       return OrderType.Store;
     default:
-      throw new Error('Invalid order type');
+      return null;
   }
 }
