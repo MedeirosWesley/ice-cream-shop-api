@@ -5,12 +5,8 @@ import { OrderDto } from '../order/dto/order.dto';
 import { ProductOrderDto } from '../order/dto/product-order.dto';
 import { AcaiDto } from '../acai/dto/acai.dto';
 import { MilkShakeDto } from '../milk-shake/dto/milk-shake.dto';
-import { PopsicleDto } from '../popsicle/dto/popsicle.dto';
-import { PopsicleOrderDto } from '../popsicle-order/dto/popsicle-order.dto';
 import { DrinkOrderDto } from '../drink-order/dto/drink-order.dto';
 import { IceCreamOrderDto } from '../ice-cream-order/dto/ice-cream-order.dto';
-import { Client } from '../client/entities/client.entity';
-import { OnSaleAcai } from '../on-sale-acai/entities/on-sale-acai.entity';
 import { OnSaleAcaiOrder } from '../on-sale-acai-order/entities/on-sale-acai-order.entity';
 import { OtherProductOrder } from '../other-product-order/entities/other-product-order.entity';
 import { PopsiclesOrderDto } from '../popsicle-order/dto/popsicles-order.dto';
@@ -21,8 +17,19 @@ import { IceCreamPotOrder } from '../ice-cream-pot-order/entities/ice-cream-pot-
 export class PrinterService {
   async printOrder(orderDetails: OrderDto) {
 
-    function formatItems(items: ProductOrderDto[]) {
-      return items.map(item => {
+    if (orderDetails.type === 'Store' && (orderDetails.products.filter(item => item.status).length === 0)) {
+      return;
+    }
+
+    function formatItems(items: ProductOrderDto[], type: string) {
+      let itemsToPrint: ProductOrderDto[];
+      if (type === 'Delivery') {
+        itemsToPrint = items;
+      }
+      else {
+        itemsToPrint = items.filter(item => item.status);
+      }
+      const print = itemsToPrint.map(item => {
         switch (item.productType) {
           case 'acai':
 
@@ -151,6 +158,8 @@ export class PrinterService {
             return '';
         }
       }).join(`\n===============================================\n\n`);
+
+      return print;
     }
 
     function formatDateTime(date: string) {
@@ -164,15 +173,22 @@ export class PrinterService {
     }
 
     function formatPaymentMethod(paymentMethod: string) {
+      let printPaymentMethod = '';
       switch (paymentMethod) {
         case 'money':
-          return 'Dinheiro';
+          printPaymentMethod = 'Dinheiro';
+          break;
         case 'credit_card':
-          return 'Cartão';
+          printPaymentMethod = 'Cartão';
+          break;
         case 'pix':
-          return 'PIX';
+          printPaymentMethod = 'PIX';
+          break;
         default:
           return '';
+      }
+      if (printPaymentMethod) {
+        printPaymentMethod = `Forma de Pagamento: ${printPaymentMethod}`;
       }
     }
 
@@ -275,10 +291,11 @@ export class PrinterService {
         .text(formatClient(orderDetails.clientName, orderDetails.client))
         .drawLine()
         .feed(1)
-        .text(formatItems(orderDetails.products))  // Lista os itens
+        .text(formatItems(orderDetails.products, orderDetails.type))  // Lista os itens
         .drawLine()
         .feed(1)
         .text(`Total: R$${getTotal(orderDetails.products).toFixed(2)}`)
+        .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
         .drawLine()
         .feed(1)
         .cut()

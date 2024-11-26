@@ -13,11 +13,13 @@ export class ProductOrderDto {
   quantity: number;
   observation?: string;
   productType: string;
+  status: boolean;
   product: AcaiDto | MilkShakeDto | PopsiclesOrderDto | DrinkOrderDto | IceCreamOrderDto | IceCreamPotOrder | OnSaleAcaiOrder | OtherProductOrder | null;
 
   constructor(orderProduct: any) {
     this.id = orderProduct.id;
     this.quantity = orderProduct.quantity;
+    this.status = orderProduct.status;
     this.observation = orderProduct.observation;
     this.productType = orderProduct.productType;
 
@@ -30,7 +32,6 @@ export class ProductOrderDto {
         break;
       case 'popsicle':
         this.product = orderProduct.popsicle;
-
         break;
       case 'drink':
         this.product = orderProduct.drink;
@@ -45,7 +46,8 @@ export class ProductOrderDto {
         this.product = orderProduct.onSaleAcai;
         break;
       case 'other_product':
-        this.product = orderProduct.otherProduct;
+        this.product = orderProduct.otherProductOrder;
+        break;
       default:
         this.product = null;
     }

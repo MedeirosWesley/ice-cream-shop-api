@@ -13,7 +13,8 @@ export class OtherProductOrderService {
   ) { }
 
   create(createOtherProductOrderDto: CreateOtherProductOrderDto): Promise<OtherProductOrder> {
-    const otherProductOrder = this.otherProductOrderRepository.create(createOtherProductOrderDto);
+    const otherProductId = createOtherProductOrderDto.otherProductId;
+    const otherProductOrder = this.otherProductOrderRepository.create({ otherProductId });
     return this.otherProductOrderRepository.save(otherProductOrder);
   }
 

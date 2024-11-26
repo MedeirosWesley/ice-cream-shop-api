@@ -29,19 +29,15 @@ export class OrderController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.orderService.update(id, updateOrderDto);
+  async update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
+    const order = await this.orderService.update(id, updateOrderDto);
+
+    await this.printService.printOrder(OrderDto.fromEntity(await this.orderService.findOne(order.id)));
+    return order;
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.orderService.remove(id);
-  }
-
-  @Post('print')
-  async printOrder(@Body() orderData: { details: OrderDto }) {
-    const { details } = orderData;
-    await this.printService.printOrder(details);
-    return { message: 'Ordem enviada para impressão!' };
   }
 }

@@ -125,6 +125,7 @@ export class OrderService {
     }
 
     order.products = products;
+
     return this.orderRepository.save(order);
   }
 
@@ -150,6 +151,7 @@ export class OrderService {
         'products.onSaleAcaiOrder.additionalExtra',
         'products.onSaleAcaiOrder.additionalRemoved',
         'products.otherProductOrder',
+        'products.otherProductOrder.otherProduct',
       ],
     });
     return data.map(order => new OrderDto(order));
@@ -158,7 +160,28 @@ export class OrderService {
   findOne(id: string) {
     return this.orderRepository.findOne({
       where: { id },
-      relations: ['products', 'products.acai', 'products.acai.additionals', 'products.milkShake', 'products.milkShake.flavors', 'products.milkShake.syrup', 'products.milkShake.additionals', 'products.popsicle', 'products.drink', 'products.iceCream', 'products.iceCreamPot', 'motorcycleCourier', 'client', 'products.onSaleAcaiOrder', 'products.onSaleAcaiOrder.additionalExtra', 'products.onSaleAcaiOrder.additionalRemoved', 'products.otherProductOrder', 'products.popsicle.popsicles',],
+      relations: [
+        'products',
+        'products.popsicle',
+        'products.popsicle.popsicles',
+        'products.popsicle.popsicles.popsicle',
+        'products.acai',
+        'products.acai.additionals',
+        'products.milkShake',
+        'products.milkShake.flavors',
+        'products.milkShake.syrup',
+        'products.milkShake.additionals',
+        'products.drink',
+        'products.iceCream',
+        'products.iceCreamPot',
+        'motorcycleCourier',
+        'client',
+        'products.onSaleAcaiOrder',
+        'products.onSaleAcaiOrder.additionalExtra',
+        'products.onSaleAcaiOrder.additionalRemoved',
+        'products.otherProductOrder',
+        'products.otherProductOrder.otherProduct',
+      ],
     });
   }
 
@@ -191,62 +214,70 @@ export class OrderService {
       order.type = getOrderTypeFromString(updateOrderDto.type);
     }
 
-    if (updateOrderDto.products) {
-      const products = [];
+    try {
 
-      for (const createProduct of updateOrderDto.products) {
-        const product = createProduct.product;
-        const orderProduct = this.orderProductRepository.create()
-        orderProduct.quantity = createProduct.quantity
-        orderProduct.observation = createProduct.observation
-        orderProduct.productType = product.type;
-        switch (product.type) {
-          case 'acai':
-            const acai = await this.acaiService.create(product.details as CreateAcaiDto)
-            orderProduct.acai = acai
-            products.push(orderProduct);
-            break;
-          case 'milk_shake':
-            const milkShake = await this.milkShakeService.create(product.details as CreateMilkShakeDto);
-            orderProduct.milkShake = milkShake;
-            products.push(orderProduct);
-            break;
-          case 'drink':
-            const drink = await this.drinkService.create(product.details as CreateDrinkOrderDto);
-            orderProduct.drink = drink;
-            products.push(orderProduct);
-            break;
-          case 'ice_cream':
-            const iceCream = await this.iceCreamService.create(product.details as CreateIceCreamOrderDto);
-            orderProduct.iceCream = iceCream;
-            products.push(orderProduct);
-            break;
-          case 'ice_cream_pot':
-            const IceCreamPot = await this.iceCreamPotService.create(product.details as CreateIceCreamPotOrderDto);
-            orderProduct.iceCreamPot = IceCreamPot;
-            products.push(orderProduct);
-            break;
-          case 'popsicle':
-            const popsicle = await this.popsicleService.create(product.details as CreatePopsiclesOrderDto);
-            orderProduct.popsicle = popsicle;
-            products.push(orderProduct);
-            break;
-          case 'on_sale_acai':
-            const onSaleAcai = await this.onSaleAcaiOrderService.create(product.details as CreateOnSaleAcaiOrderDto);
-            orderProduct.onSaleAcaiOrder = onSaleAcai;
-            products.push(orderProduct);
-            break;
-          case 'other_product':
-            const otherProduct = await this.outherProductOrderService.create(product.details as CreateOtherProductOrderDto);
-            orderProduct.otherProductOrder = otherProduct;
-            products.push(orderProduct);
-            break;
-          default:
-            throw new BadRequestException(`Invalid product type ${product}`);
+
+      if (updateOrderDto.products) {
+        const products = [];
+
+        for (const createProduct of updateOrderDto.products) {
+          const product = createProduct.product;
+          const orderProduct = this.orderProductRepository.create()
+          orderProduct.quantity = createProduct.quantity
+          orderProduct.observation = createProduct.observation
+          orderProduct.productType = product.type;
+          switch (product.type) {
+            case 'acai':
+              const acai = await this.acaiService.create(product.details as CreateAcaiDto)
+              orderProduct.acai = acai
+              products.push(orderProduct);
+              break;
+            case 'milk_shake':
+              const milkShake = await this.milkShakeService.create(product.details as CreateMilkShakeDto);
+              orderProduct.milkShake = milkShake;
+              products.push(orderProduct);
+              break;
+            case 'drink':
+              const drink = await this.drinkService.create(product.details as CreateDrinkOrderDto);
+              orderProduct.drink = drink;
+              products.push(orderProduct);
+              break;
+            case 'ice_cream':
+              const iceCream = await this.iceCreamService.create(product.details as CreateIceCreamOrderDto);
+              orderProduct.iceCream = iceCream;
+              products.push(orderProduct);
+              break;
+            case 'ice_cream_pot':
+              const IceCreamPot = await this.iceCreamPotService.create(product.details as CreateIceCreamPotOrderDto);
+              orderProduct.iceCreamPot = IceCreamPot;
+              products.push(orderProduct);
+              break;
+            case 'popsicle':
+              const popsicle = await this.popsicleService.create(product.details as CreatePopsiclesOrderDto);
+              orderProduct.popsicle = popsicle;
+              products.push(orderProduct);
+              break;
+            case 'on_sale_acai':
+              const onSaleAcai = await this.onSaleAcaiOrderService.create(product.details as CreateOnSaleAcaiOrderDto);
+              orderProduct.onSaleAcaiOrder = onSaleAcai;
+              products.push(orderProduct);
+              break;
+            case 'other_product':
+              const otherProduct = await this.outherProductOrderService.create(product.details as CreateOtherProductOrderDto);
+              orderProduct.otherProductOrder = otherProduct;
+              products.push(orderProduct);
+              break;
+            default:
+              throw new BadRequestException(`Invalid product type ${product}`);
+          }
         }
+
+        order.products = products
       }
 
-      order.products = products
+    } catch (error) {
+
+      console.log(error);
     }
 
     return this.orderRepository.save(order);
