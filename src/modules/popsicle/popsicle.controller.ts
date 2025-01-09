@@ -31,6 +31,13 @@ export class PopsicleController {
     return this.popsicleService.update(id, updatePopsicleDto);
   }
 
+  @Put()
+  updateByTypes(
+    @Body() updatePopsicleDto: UpdatePopsicleDto,
+  ): Promise<Popsicle[]> {
+    return this.popsicleService.updateByTypes(updatePopsicleDto);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
     return this.popsicleService.remove(id);

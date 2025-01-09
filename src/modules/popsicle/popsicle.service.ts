@@ -30,6 +30,12 @@ export class PopsicleService {
     return this.findOne(id);
   }
 
+  async updateByTypes(updatePopsicleDto: UpdatePopsicleDto): Promise<Popsicle[]> {
+
+    await this.popsicleRepository.update({ type: updatePopsicleDto.type }, updatePopsicleDto);
+    return this.popsicleRepository.find();
+  }
+
   async remove(id: string): Promise<void> {
     await this.popsicleRepository.delete(id);
   }
