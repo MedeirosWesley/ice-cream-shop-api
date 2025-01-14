@@ -10,6 +10,10 @@ export class CreateOnSaleAcaiDto {
   @IsNotEmpty()
   price: number;
 
+  @IsNumber()
+  @IsNotEmpty()
+  quantity: number;
+
   @IsArray()
   @IsUUID('4', { each: true })
   additionals: string[];

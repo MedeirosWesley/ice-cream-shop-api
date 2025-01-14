@@ -19,7 +19,7 @@ export class OnSaleAcaiService {
   ) { }
 
   async create(createOnSaleAcaiDto: CreateOnSaleAcaiDto): Promise<OnSaleAcai> {
-    const { sizeId, additionals } = createOnSaleAcaiDto;
+    const { sizeId, additionals, quantity } = createOnSaleAcaiDto;
 
     // Criar os orderAdditionals
     const orderAdditionals = await Promise.all(
@@ -42,6 +42,7 @@ export class OnSaleAcaiService {
       sizeId,
       additionals: orderAdditionals,
       price: createOnSaleAcaiDto.price,
+      quantity: createOnSaleAcaiDto.quantity,
     });
 
     return this.onSaleAcaiRepository.save(onSaleAcai);
@@ -70,25 +71,29 @@ export class OnSaleAcaiService {
     }
 
     // Atualizar os campos
-    onSaleAcai.sizeId = sizeId;
-    onSaleAcai.price = updateOnSaleAcaiDto.price;
+    if (updateOnSaleAcaiDto.price) onSaleAcai.price = updateOnSaleAcaiDto.price;
+    if (updateOnSaleAcaiDto.quantity) onSaleAcai.quantity = updateOnSaleAcaiDto.quantity;
+    if (updateOnSaleAcaiDto.sizeId) onSaleAcai.sizeId = sizeId;
+
 
     // Atualizar os additionals
-    onSaleAcai.additionals = await Promise.all(
-      additionals.map(async (item) => {
-        // Buscar o additional relacionado
-        const additional = await this.additionalRepository.findOne({ where: { id: item } });
+    if (additionals) {
+      onSaleAcai.additionals = await Promise.all(
+        additionals.map(async (item) => {
+          // Buscar o additional relacionado
+          const additional = await this.additionalRepository.findOne({ where: { id: item } });
 
-        if (!additional) {
-          throw new BadRequestException(`Additional with id ${item} not found`);
-        }
+          if (!additional) {
+            throw new BadRequestException(`Additional with id ${item} not found`);
+          }
 
-        // Criar o OrderAdditional com o Additional encontrado
-        return this.acaiAdditionalRepository.create({
-          additional, // Aqui associamos o additional
-        });
-      }),
-    );
+          // Criar o OrderAdditional com o Additional encontrado
+          return this.acaiAdditionalRepository.create({
+            additional, // Aqui associamos o additional
+          });
+        }),
+      );
+    }
 
     return this.onSaleAcaiRepository.save(onSaleAcai);
   }

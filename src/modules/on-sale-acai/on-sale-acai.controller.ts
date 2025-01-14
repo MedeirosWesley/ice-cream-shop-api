@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
 import { OnSaleAcaiService } from './on-sale-acai.service';
 import { CreateOnSaleAcaiDto } from './dto/create-on-sale-acai.dto';
 import { UpdateOnSaleAcaiDto } from './dto/update-on-sale-acai.dto';
@@ -22,7 +22,7 @@ export class OnSaleAcaiController {
     return this.onSaleAcaiService.findOne(id);
   }
 
-  @Patch(':id')
+  @Put(':id')
   update(@Param('id') id: string, @Body() updateOnSaleAcaiDto: UpdateOnSaleAcaiDto) {
     return this.onSaleAcaiService.update(id, updateOnSaleAcaiDto);
   }
