@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
-import { Or, Repository } from 'typeorm';
+import { Between, Or, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AcaiService } from '../acai/acai.service';
 import { MilkShakeService } from '../milk-shake/milk-shake.service';
@@ -47,8 +47,15 @@ export class OrderService {
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     const order = new Order();
     if (createOrderDto.client) {
-      const client = await this.clientService.create(createOrderDto.client);
-      order.client = client;
+      const client = await this.clientService.findOne(createOrderDto.client.id);
+
+      if (!client) {
+        const newClient = await this.clientService.create(createOrderDto.client);
+        order.client = newClient;
+      } else {
+        await this.clientService.update(createOrderDto.client.id, createOrderDto.client);
+        order.client = client;
+      }
     }
     if (createOrderDto.clientName) {
       order.clientName = createOrderDto.clientName;
@@ -130,7 +137,13 @@ export class OrderService {
   }
 
   async findAll() {
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0]; // "YYYY-MM-DD"
+
     const data = await this.orderRepository.find({
+      where: {
+        date: Between(`${todayString} 00:00:00`, `${todayString} 23:59:59`)
+      },
       relations: [
         'products',
         'products.popsicle',

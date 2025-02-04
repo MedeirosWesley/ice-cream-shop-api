@@ -26,4 +26,8 @@ export class ClientService {
   async remove(id: string): Promise<void> {
     await this.clientRepository.delete(id);
   }
+
+  async update(id: string, client: CreateClientDto): Promise<void> {
+    await this.clientRepository.update(id, client);
+  }
 }

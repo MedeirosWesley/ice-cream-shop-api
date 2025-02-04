@@ -1,6 +1,8 @@
-import { IsNotEmpty, IsNumber, IsString } from "class-validator";
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 
 export class CreateClientDto {
+  @IsOptional()
+  id: string;
   @IsNotEmpty({ message: "O Telefone não pode ser vazio!" })
   @IsString()
   phone: string;
