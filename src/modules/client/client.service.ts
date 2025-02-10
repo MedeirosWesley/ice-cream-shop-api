@@ -19,7 +19,17 @@ export class ClientService {
     return this.clientRepository.findOneBy({ id });
   }
 
-  create(client: CreateClientDto): Promise<Client> {
+  create(createClientDto: CreateClientDto): Promise<Client> {
+
+    const newClient = new Client();
+    newClient.name = createClientDto.name;
+    newClient.houseNumber = createClientDto.houseNumber;
+    newClient.phone = createClientDto.phone;
+    newClient.neighborhood = createClientDto.neighborhood;
+    newClient.reference = createClientDto.reference;
+    newClient.street = createClientDto.street;
+
+    const client = this.clientRepository.create(newClient);
     return this.clientRepository.save(client);
   }
 

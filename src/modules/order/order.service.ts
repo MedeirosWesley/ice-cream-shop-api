@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
-import { Between, Or, Repository } from 'typeorm';
+import { Between, Like, Or, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AcaiService } from '../acai/acai.service';
 import { MilkShakeService } from '../milk-shake/milk-shake.service';
@@ -25,6 +25,8 @@ import { OnSaleAcaiOrderService } from '../on-sale-acai-order/on-sale-acai-order
 import { CreateOnSaleAcaiOrderDto } from '../on-sale-acai-order/dto/create-on-sale-acai-order.dto';
 import { OtherProductOrderService } from '../other-product-order/other-product-order.service';
 import { CreateOtherProductOrderDto } from '../other-product-order/dto/create-other-product-order.dto';
+import { CreateClientDto } from '../client/dto/create-client.dto';
+import { Client } from '../client/entities/client.entity';
 
 @Injectable()
 export class OrderService {
@@ -47,20 +49,12 @@ export class OrderService {
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     const order = new Order();
     if (createOrderDto.client) {
-      const client = await this.clientService.findOne(createOrderDto.client.id);
-
-      if (!client) {
-        const newClient = await this.clientService.create(createOrderDto.client);
-        order.client = newClient;
-      } else {
-        await this.clientService.update(createOrderDto.client.id, createOrderDto.client);
-        order.client = client;
-      }
+      order.client = await this.createOrUpdateClient(createOrderDto.client);
     }
     if (createOrderDto.clientName) {
       order.clientName = createOrderDto.clientName;
     }
-    order.clientId = createOrderDto.clientId;
+    order.clientId = createOrderDto.clientId ?? order.client?.id;
     order.paymentMethod = createOrderDto.paymentMethod;
     order.motorcycleCourierId = createOrderDto.motorcycleCourierId;
     order.date = new Date().toISOString();
@@ -138,11 +132,11 @@ export class OrderService {
 
   async findAll() {
     const today = new Date();
-    const todayString = today.toISOString().split('T')[0]; // "YYYY-MM-DD"
+    const todayString = today.toISOString().split('T')[0];
 
     const data = await this.orderRepository.find({
       where: {
-        date: Between(`${todayString} 00:00:00`, `${todayString} 23:59:59`)
+        date: Like(`${todayString}%`)
       },
       relations: [
         'products',
@@ -161,8 +155,12 @@ export class OrderService {
         'motorcycleCourier',
         'client',
         'products.onSaleAcaiOrder',
+        'products.onSaleAcaiOrder.onSaleAcai',
+        'products.onSaleAcaiOrder.onSaleAcai.additionals',
         'products.onSaleAcaiOrder.additionalExtra',
+        'products.onSaleAcaiOrder.additionalExtra.additional',
         'products.onSaleAcaiOrder.additionalRemoved',
+        'products.onSaleAcaiOrder.additionalRemoved.additional',
         'products.otherProductOrder',
         'products.otherProductOrder.otherProduct',
       ],
@@ -304,5 +302,20 @@ export class OrderService {
     }
 
     return this.orderRepository.remove(order);
+  }
+
+  async createOrUpdateClient(clientDto: CreateClientDto): Promise<Client> {
+    if (!clientDto || !clientDto.id) {
+      return await this.clientService.create(clientDto);
+    }
+
+    const existingClient = await this.clientService.findOne(clientDto.id);
+
+    if (!existingClient) {
+      return this.clientService.create(clientDto);
+    }
+
+    await this.clientService.update(clientDto.id, clientDto);
+    return existingClient;
   }
 }

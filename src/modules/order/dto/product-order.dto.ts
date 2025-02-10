@@ -43,7 +43,7 @@ export class ProductOrderDto {
         this.product = orderProduct.iceCreamPot;
         break;
       case 'on_sale_acai':
-        this.product = orderProduct.onSaleAcai;
+        this.product = orderProduct.onSaleAcaiOrder;
         break;
       case 'other_product':
         this.product = orderProduct.otherProductOrder;
