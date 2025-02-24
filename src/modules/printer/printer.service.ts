@@ -46,8 +46,8 @@ export class PrinterService {
               const name = `${additional.quantity} x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
               const price = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}${(additional.quantity * additional.additional.price).toFixed(2)}`;
 
-              const dots = '.'.repeat(37 - name.length - price.length);
-              acaiprintItem += `\n\t${name} ${dots} ${price}`;
+              const dots = '.'.repeat(43 - name.length - price.length);
+              acaiprintItem += `\n  ${name} ${dots} ${price}`;
             });
             if (item.observation) acaiprintItem += `\nObservação: ${item.observation}`;
             let subtotal = ((acai.size.price + acai.additionals.reduce((acc, additional) => acc + additional.additional.price, 0)) * item.quantity);
@@ -56,14 +56,14 @@ export class PrinterService {
           case 'milk_shake':
             const milkShake = item.product as MilkShakeDto;
             let milkShakePrintItem = '';
-            let milkShakename = `${item.quantity}x Milk Shake ${milkShake.size.size.toFixed(0)}`;
+            let milkShakename = `${item.quantity}x Milk Shake ${milkShake.size.size.toFixed(0)} ml`;
             let milkShakePrice = `${(item.quantity * milkShake.size.price) < 10 ? `R$ ` : `R$`}${(item.quantity * milkShake.size.price).toFixed(2)}`;
             const milkDots = '.'.repeat(44 - milkShakename.length - milkShakePrice.length);
 
 
             milkShakePrintItem += `${milkShakename} ${milkDots} ${milkShakePrice}`;
 
-            milkShakePrintItem += `\n  Sabores:`;
+            milkShakePrintItem += `\n  Sabor:`;
 
 
             milkShake.flavors.forEach(flavor => {
@@ -74,11 +74,13 @@ export class PrinterService {
               milkShakePrintItem += `\n  Calda: ${milkShake.syrup.name}`;
             }
 
+            if (milkShake.additionals.length !== 0) milkShakePrintItem += `\n  Adicionais:`;
+
             milkShake.additionals.forEach(additional => {
               const name = `${additional.quantity}x ${additional.additional.name}`;
               const price = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}  ${(additional.quantity * additional.additional.price).toFixed(2)}`;
-              const dots = '.'.repeat(37 - name.length - price.length);  // Ajuste o número 30 conforme necessário
-              milkShakePrintItem += `\n\t${name} ${dots} ${price}`;
+              const dots = '.'.repeat(37 - name.length - price.length);
+              milkShakePrintItem += `\n    ${name} ${dots} ${price}`;
             });
             if (item.observation) milkShakePrintItem += `\nObservação: ${item.observation}`;
             let milkSubtotal = ((milkShake.size.price + milkShake.additionals.reduce((acc, additional) => acc + additional.additional.price, 0)) * item.quantity);
@@ -194,8 +196,8 @@ export class PrinterService {
     }
 
     function getChange(order: OrderDto) {
-      if (order.paymentMethod === 'money' && order.cashChange && order.type === 'Delivery') {
-        return `Troco: R$${(order.cashChange - getTotal(order.products)).toFixed(2)}`;
+      if (order.cashChange) {
+        return `Troco para: R$${order.cashChange.toFixed(2)}\nValor do troco: R$${(order.cashChange - getTotal(order.products)).toFixed(2)}`;
       }
       return '';
     }
@@ -285,6 +287,10 @@ export class PrinterService {
 
 
       device.open((error) => {
+        if (error) {
+          console.error('Erro ao abrir a impressora:', error);
+          return;
+        }
         printer
           .align('CT')
           .style('B')

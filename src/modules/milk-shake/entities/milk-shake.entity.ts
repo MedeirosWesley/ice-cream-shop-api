@@ -13,7 +13,7 @@ export class MilkShake {
   @Column()
   sizeId: string;
 
-  @Column()
+  @Column({ nullable: true })
   syrupId: string;
 
   @ManyToOne(() => IceCreamSize, { eager: true })
