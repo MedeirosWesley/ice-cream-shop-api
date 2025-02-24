@@ -60,6 +60,8 @@ export class OrderService {
     order.date = new Date().toISOString();
     order.status = OrderStatus.Pending;
     order.amountPaid = 0;
+    order.cashChange = createOrderDto.cashChange;
+    order.toTake = createOrderDto.toTake;
     order.type = getOrderTypeFromString(createOrderDto.type);
 
     const lastOrder = await this.orderRepository.findOne({
@@ -79,6 +81,7 @@ export class OrderService {
       orderProduct.quantity = createProduct.quantity
       orderProduct.observation = createProduct.observation
       orderProduct.productType = product.type;
+      orderProduct.status = createProduct.status;
       switch (product.type) {
         case 'acai':
           const acai = await this.acaiService.create(product.details as CreateAcaiDto)
@@ -224,6 +227,13 @@ export class OrderService {
     if (updateOrderDto.type !== null) {
       order.type = getOrderTypeFromString(updateOrderDto.type);
     }
+    if (updateOrderDto.toTake !== null) {
+      order.toTake = updateOrderDto.toTake;
+    }
+    if (updateOrderDto.cashChange !== null) {
+      order.cashChange = updateOrderDto.cashChange;
+    }
+
 
     try {
 
@@ -237,6 +247,7 @@ export class OrderService {
           orderProduct.quantity = createProduct.quantity
           orderProduct.observation = createProduct.observation
           orderProduct.productType = product.type;
+          orderProduct.status = createProduct.status;
           switch (product.type) {
             case 'acai':
               const acai = await this.acaiService.create(product.details as CreateAcaiDto)

@@ -7,6 +7,9 @@ export class CreateAcaiDto {
   @IsNotEmpty()
   sizeId: string;
 
+  @IsBoolean()
+  inCup: boolean;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateOrderAdditionalDto)

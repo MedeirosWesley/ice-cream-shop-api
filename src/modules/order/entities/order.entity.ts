@@ -21,6 +21,12 @@ export class Order {
   date: string;
 
   @Column({ nullable: true })
+  cashChange: number;
+
+  @Column({ nullable: true })
+  toTake: boolean;
+
+  @Column({ nullable: true })
   clientName: string;
 
   @Column({ nullable: true })

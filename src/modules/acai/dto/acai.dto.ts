@@ -6,6 +6,9 @@ export class AcaiDto {
   @Expose()
   id: string;
 
+  @Expose()
+  inCup: boolean;
+
   @Type(() => OrderAdditionalDto)
   @Expose()
   additionals: OrderAdditionalDto[];

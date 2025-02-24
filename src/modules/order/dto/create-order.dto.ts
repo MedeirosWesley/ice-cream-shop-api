@@ -1,4 +1,4 @@
-import { IsArray, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
 import { OrderProduct } from "../entities/order-product.entity";
 import { Type } from "class-transformer";
 import { CreateOrderProduct } from "./create-order-product.dto";
@@ -22,6 +22,14 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   paymentMethod: string;
+
+  @IsOptional()
+  @IsNumber()
+  cashChange: number;
+
+  @IsOptional()
+  @IsBoolean()
+  toTake: boolean;
 
   @IsString()
   type: string;

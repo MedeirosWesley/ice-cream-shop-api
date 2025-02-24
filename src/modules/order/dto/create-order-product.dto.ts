@@ -1,4 +1,4 @@
-import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments, Validate, validateSync, IsInt, IsOptional, IsString } from 'class-validator';
+import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments, Validate, validateSync, IsInt, IsOptional, IsString, IsBoolean } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { CreateAcaiDto } from 'src/modules/acai/dto/create-acai.dto';
 import { CreateMilkShakeDto } from 'src/modules/milk-shake/dto/create-milk-shake.dto';
@@ -56,6 +56,9 @@ export class CreateOrderProduct {
   @IsOptional()
   @IsString()
   observation?: string;
+
+  @IsBoolean()
+  status: boolean;
 
   // @Validate(IsProductValidConstraint)
   product: CreateProductDto;

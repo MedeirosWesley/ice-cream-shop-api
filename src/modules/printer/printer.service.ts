@@ -17,6 +17,7 @@ import { IceCreamPotOrder } from '../ice-cream-pot-order/entities/ice-cream-pot-
 export class PrinterService {
   async printOrder(orderDetails: OrderDto) {
 
+
     if (orderDetails.type === 'Store' && (orderDetails.products.filter(item => item.status).length === 0)) {
       return;
     }
@@ -37,7 +38,7 @@ export class PrinterService {
 
             let acaiprintItem = '';
 
-            const name = `${item.quantity} x Açaí ${acai.size.size.toFixed(0)}`
+            const name = `${item.quantity} x Açaí ${acai.size.size.toFixed(0)} ml ${acai.inCup ? ' - (COPO)' : ''}`;
             const price = `R$${(item.quantity * acai.size.price).toFixed(2)}`;
             acaiprintItem += `${name} ${'.'.repeat(45 - name.length - price.length)} ${price}`;
 
@@ -192,6 +193,13 @@ export class PrinterService {
       }
     }
 
+    function getChange(order: OrderDto) {
+      if (order.paymentMethod === 'money' && order.cashChange && order.type === 'Delivery') {
+        return `Troco: R$${(order.cashChange - getTotal(order.products)).toFixed(2)}`;
+      }
+      return '';
+    }
+
     function formatClient(clientName: string, client: any) {
       let printClient = '';
       if (clientName) {
@@ -206,6 +214,13 @@ export class PrinterService {
         }
       }
       return printClient;
+    }
+
+    function getToTake(order: OrderDto) {
+      if (order.toTake) {
+        return 'LEVAR';
+      }
+      return ''
     }
 
 
@@ -263,45 +278,39 @@ export class PrinterService {
         console.error('Nenhuma impressora conectada');
         return;
       }
+
+
+      const options = { encoding: "CP860" }
+      const printer = new escpos.Printer(device, options);
+
+
       device.open((error) => {
-        if (error) {
-          console.error('Erro ao abrir a conexão com a impressora:', error);
-          return;
-        }
+        printer
+          .align('CT')
+          .style('B')
+          .text('Kimolek')
+          .style('NORMAL')
+          .feed(1)
+          .text('---------- Ordem de Pedido ---------')
+          .feed(1)
+          .align('LT')
+          .font('A')
+          .text(`Número do Pedido: ${orderDetails.productId}`)
+          .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
+          .text(formatClient(orderDetails.clientName, orderDetails.client))
+          .drawLine()
+          .text(getToTake(orderDetails))
+          .text(formatItems(orderDetails.products, orderDetails.type))  // Lista os itens
+          .drawLine()
+          .feed(1)
+          .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
+          .text(`Total: R$${getTotal(orderDetails.products).toFixed(2)}`)
+          .text(getChange(orderDetails))
+          .drawLine()
+          .feed(1)
+          .cut()
+          .close();
       });
-      const printer = new escpos.Printer(device);
-
-      printer.encode('CP860');
-
-
-
-      await printer
-        .flush()
-        .align('CT')
-        .style('B')
-        .text('Kimolek')
-        .style('NORMAL')
-        .feed(1)
-        .text('---------- Ordem de Pedido ---------')
-        .feed(1)
-        .align('LT')
-        .font('A')
-        .text(`Número do Pedido: ${orderDetails.productId}`)
-        .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
-        .text(formatClient(orderDetails.clientName, orderDetails.client))
-        .drawLine()
-        .feed(1)
-        .text(formatItems(orderDetails.products, orderDetails.type))  // Lista os itens
-        .drawLine()
-        .feed(1)
-        .text(`Total: R$${getTotal(orderDetails.products).toFixed(2)}`)
-        .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
-        .drawLine()
-        .feed(1)
-        .cut()
-        .flush()
-        .close();
-
     } catch (error) {
       console.error('Erro ao imprimir:', error);
     }

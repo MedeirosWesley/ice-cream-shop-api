@@ -10,6 +10,9 @@ export class Acai {
   @Column()
   sizeId: string;
 
+  @Column({ nullable: true })
+  inCup: boolean;
+
   @ManyToOne(() => IceCreamSize, { eager: true })
   @JoinColumn()
   size: IceCreamSize;

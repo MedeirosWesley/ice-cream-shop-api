@@ -21,7 +21,7 @@ export class OrderProduct {
   @Column({ nullable: true })
   observation: string;
 
-  @Column({ type: 'boolean', default: false })
+  @Column()
   status: boolean;
 
   @Column()
