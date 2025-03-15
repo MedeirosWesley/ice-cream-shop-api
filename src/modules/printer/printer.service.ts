@@ -197,7 +197,7 @@ export class PrinterService {
 
     function getChange(order: OrderDto) {
       if (order.cashChange) {
-        return `Troco para: R$${order.cashChange.toFixed(2)}\nValor do troco: R$${(order.cashChange - getTotal(order.products)).toFixed(2)}`;
+        return `Troco para: R$${order.cashChange.toFixed(2)}\nValor do troco: R$${(order.cashChange - getTotal(order.products, order.type)).toFixed(2)}`;
       }
       return '';
     }
@@ -226,7 +226,7 @@ export class PrinterService {
     }
 
 
-    function getTotal(items: ProductOrderDto[]): number {
+    function getTotal(items: ProductOrderDto[], type: string): number {
       let total = 0;
       items.forEach(item => {
         switch (item.productType) {
@@ -270,6 +270,9 @@ export class PrinterService {
             break;
         }
       });
+      if (type === 'Delivery') {
+        total += 1.5;
+      }
       return total
     }
 
@@ -310,7 +313,7 @@ export class PrinterService {
           .drawLine()
           .feed(1)
           .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
-          .text(`Total: R$${getTotal(orderDetails.products).toFixed(2)}`)
+          .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
           .text(getChange(orderDetails))
           .drawLine()
           .feed(1)
