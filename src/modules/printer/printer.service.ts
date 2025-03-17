@@ -134,12 +134,17 @@ export class PrinterService {
               const price = `-`;
 
               const dots = '.'.repeat(37 - name.length - price.length);
-              acaiprintItem += `\n\t${name} ${dots} ${price}`;
+              onSaleAcaiPrintItem += `\n\t${name} ${dots} ${price}`;
 
             });
 
-            acaiprintItem += '.'.repeat(37);
-            acaiprintItem += '\n\tAdicionais Extras:\n';
+            if (onSaleAcai.additionalExtra.length !== 0) {
+              onSaleAcaiPrintItem += '\n';
+              onSaleAcaiPrintItem += '.'.repeat(37);
+              onSaleAcaiPrintItem += '\n\tAdicionais Extras:\n';
+            }
+
+
 
             onSaleAcai.additionalExtra.forEach(additional => {
               const onSaleAcaiName = `${additional.quantity} x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
@@ -263,6 +268,7 @@ export class PrinterService {
           case 'on_sale_acai':
             const onSaleAcai = item.product as OnSaleAcaiOrder;
             total += item.quantity * (onSaleAcai.onSaleAcai.price + onSaleAcai.additionalExtra.reduce((acc, additional) => acc + additional.additional.price * additional.additional.price, 0));
+            break;
           case 'other_product':
             const otherProduct = item.product as OtherProductOrder;
             total += item.quantity * otherProduct.otherProduct.price;
@@ -284,10 +290,8 @@ export class PrinterService {
         return;
       }
 
-
       const options = { encoding: "CP860" }
       const printer = new escpos.Printer(device, options);
-
 
       device.open((error) => {
         if (error) {
