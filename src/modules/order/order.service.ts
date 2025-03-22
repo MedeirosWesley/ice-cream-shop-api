@@ -133,13 +133,14 @@ export class OrderService {
     return this.orderRepository.save(order);
   }
 
-  async findAll() {
+  async findAll(type: string) {
     const today = new Date();
     const todayString = today.toISOString().split('T')[0];
 
     const data = await this.orderRepository.find({
       where: {
-        date: Like(`${todayString}%`)
+        date: Like(`${todayString}%`),
+        type: type
       },
       relations: [
         'products',

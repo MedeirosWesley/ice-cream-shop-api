@@ -18,9 +18,9 @@ export class OrderController {
     return order;
   }
 
-  @Get()
-  findAll() {
-    return this.orderService.findAll();
+  @Get(':type')
+  findAll(@Param('type') type: string) {
+    return this.orderService.findAll(type);
   }
 
   @Get(':id')
