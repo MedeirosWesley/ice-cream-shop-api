@@ -198,6 +198,7 @@ export class PrinterService {
       if (printPaymentMethod) {
         printPaymentMethod = `Forma de Pagamento: ${printPaymentMethod}`;
       }
+      return printPaymentMethod;
     }
 
     function getChange(order: OrderDto) {
@@ -300,7 +301,6 @@ export class PrinterService {
         }
         printer
           .align('CT')
-          .style('B')
           .text('Kimolek')
           .style('NORMAL')
           .feed(1)
