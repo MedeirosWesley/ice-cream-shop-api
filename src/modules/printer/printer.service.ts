@@ -122,7 +122,7 @@ export class PrinterService {
 
             let onSaleAcaiPrintItem = '';
 
-            const onSaleAcaiName = `${item.quantity}x Açaí PROMOÇÃO ${onSaleAcai.onSaleAcai.size.size.toFixed(0)}`;
+            const onSaleAcaiName = `${item.quantity}x Açaí PROMOÇÃO ${onSaleAcai.onSaleAcai.size.size.toFixed(0)} ml`;
             const onSaleAcaiPrice = `R$${(item.quantity * onSaleAcai.onSaleAcai.price).toFixed(2)}`;
             onSaleAcaiPrintItem += `${onSaleAcaiName} ${'.'.repeat(45 - onSaleAcaiName.length - onSaleAcaiPrice.length)} ${onSaleAcaiPrice}`;
             const additionalRemoved = new Set(onSaleAcai.additionalRemoved.map(item => item.additional.id));
@@ -263,8 +263,8 @@ export class PrinterService {
             total += item.quantity * iceCream.price;
             break;
           case 'ice_cream_pot':
-            const iceCreamPot = item.product as IceCreamOrderDto;
-            total += item.quantity * iceCreamPot.price;
+            const iceCreamPot = item.product as IceCreamPotOrder;
+            total += item.quantity * iceCreamPot.size.price;
             break;
           case 'on_sale_acai':
             const onSaleAcai = item.product as OnSaleAcaiOrder;
@@ -283,6 +283,16 @@ export class PrinterService {
       return total
     }
 
+
+    // console.log(`Número do Pedido: ${orderDetails.productId}\n
+    //   Data: ${formatDateTime(orderDetails.date.toString())}\n
+    //   ${formatClient(orderDetails.clientName, orderDetails.client)}\n
+    //   ${getToTake(orderDetails)}\n${formatItems(orderDetails.products, orderDetails.type)}\n
+    //   ${formatPaymentMethod(orderDetails.paymentMethod)}\n
+    //   Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}\n${getChange(orderDetails)}
+    //   `);
+
+
     try {
       const device = await escposUSB.getDevice();
 
@@ -294,7 +304,7 @@ export class PrinterService {
       const options = { encoding: "CP860" }
       const printer = new escpos.Printer(device, options);
 
-      device.open((error) => {
+      device.open((error: any) => {
         if (error) {
           console.error('Erro ao abrir a impressora:', error);
           return;
