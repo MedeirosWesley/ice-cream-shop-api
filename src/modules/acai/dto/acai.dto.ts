@@ -9,6 +9,9 @@ export class AcaiDto {
   @Expose()
   inCup: boolean;
 
+  @Expose()
+  isJuice: boolean;
+
   @Type(() => OrderAdditionalDto)
   @Expose()
   additionals: OrderAdditionalDto[];

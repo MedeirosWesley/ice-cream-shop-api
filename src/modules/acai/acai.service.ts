@@ -19,7 +19,7 @@ export class AcaiService {
   ) { }
 
   async create(createAcaiDto: Partial<CreateAcaiDto>): Promise<Acai> {
-    const { sizeId, additionals, inCup } = createAcaiDto;
+    const { sizeId, additionals, inCup, isJuice } = createAcaiDto;
 
     // Criar os orderAdditionals
     const orderAdditionals = await Promise.all(
@@ -43,6 +43,7 @@ export class AcaiService {
     const acai = this.acaiRepository.create({
       sizeId,
       inCup,
+      isJuice,
       additionals: orderAdditionals,
     });
 

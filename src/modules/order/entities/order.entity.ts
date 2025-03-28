@@ -17,8 +17,9 @@ export class Order {
   @Column({ nullable: true })
   paymentMethod: string;
 
-  @Column({ nullable: true })
-  date: string;
+  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  date: Date;
+
 
   @Column({ nullable: true })
   cashChange: number;
@@ -37,6 +38,9 @@ export class Order {
 
   @Column({ nullable: true })
   amountPaid: number;
+
+  @Column({ type: 'decimal', nullable: true })
+  total: number;
 
   @Column({ nullable: true })
   motorcycleCourierId: string;

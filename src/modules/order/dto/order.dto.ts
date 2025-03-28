@@ -32,7 +32,7 @@ export class OrderDto {
     this.status = order.status;
     this.type = order.type;
     this.amountPaid = order.amountPaid;
-    this.date = order.date;
+    this.date = order.date.toISOString();
     this.cashChange = order.cashChange;
     this.productId = order.productIndex;
     this.toTake = order.toTake;

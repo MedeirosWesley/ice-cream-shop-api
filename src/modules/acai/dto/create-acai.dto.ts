@@ -10,6 +10,9 @@ export class CreateAcaiDto {
   @IsBoolean()
   inCup: boolean;
 
+  @IsBoolean()
+  isJuice: boolean;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateOrderAdditionalDto)

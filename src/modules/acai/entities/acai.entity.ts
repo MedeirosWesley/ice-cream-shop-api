@@ -13,6 +13,9 @@ export class Acai {
   @Column({ nullable: true })
   inCup: boolean;
 
+  @Column({ nullable: true })
+  isJuice: boolean;
+
   @ManyToOne(() => IceCreamSize, { eager: true })
   @JoinColumn()
   size: IceCreamSize;

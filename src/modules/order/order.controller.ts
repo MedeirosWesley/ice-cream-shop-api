@@ -18,6 +18,11 @@ export class OrderController {
     return order;
   }
 
+  @Get('sales-summary')
+  async getSalesSummary() {
+    return await this.orderService.getSalesSummary();
+  }
+
   @Get(':type')
   findAll(@Param('type') type: string) {
     return this.orderService.findAll(type);

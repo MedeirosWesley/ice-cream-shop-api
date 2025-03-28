@@ -38,17 +38,21 @@ export class PrinterService {
 
             let acaiprintItem = '';
 
-            const name = `${item.quantity} x Açaí ${acai.size.size.toFixed(0)} ml ${acai.inCup ? ' - (COPO)' : ''}`;
+            const name = `${item.quantity} x ${acai.isJuice ? 'Suco de ' : ''}Açaí ${acai.size.size.toFixed(0)} ml ${acai.inCup ? ' - (COPO)' : ''}`;
             const price = `R$${(item.quantity * acai.size.price).toFixed(2)}`;
             acaiprintItem += `${name} ${'.'.repeat(45 - name.length - price.length)} ${price}`;
 
-            acai.additionals.forEach(additional => {
-              const name = `${additional.quantity} x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
-              const price = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}${(additional.quantity * additional.additional.price).toFixed(2)}`;
+            if (acai.additionals) {
+              acai.additionals.forEach(additional => {
+                const name = `${additional.quantity} x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
+                const price = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}${(additional.quantity * additional.additional.price).toFixed(2)}`;
 
-              const dots = '.'.repeat(43 - name.length - price.length);
-              acaiprintItem += `\n  ${name} ${dots} ${price}`;
-            });
+                const dots = '.'.repeat(43 - name.length - price.length);
+                acaiprintItem += `\n  ${name} ${dots} ${price}`;
+              });
+            }
+
+
             if (item.observation) acaiprintItem += `\nObservação: ${item.observation}`;
             let subtotal = ((acai.size.price + acai.additionals.reduce((acc, additional) => acc + additional.additional.price, 0)) * item.quantity);
             acaiprintItem += `\n\n${' '.repeat(34 - subtotal.toFixed(2).length)}SubTotal: ${subtotal < 10 ? 'R$ ' : 'R$'}${subtotal.toFixed(2)}`;
@@ -268,7 +272,7 @@ export class PrinterService {
             break;
           case 'on_sale_acai':
             const onSaleAcai = item.product as OnSaleAcaiOrder;
-            total += item.quantity * (onSaleAcai.onSaleAcai.price + onSaleAcai.additionalExtra.reduce((acc, additional) => acc + additional.additional.price * additional.additional.price, 0));
+            total += item.quantity * (onSaleAcai.onSaleAcai.price + onSaleAcai.additionalExtra.reduce((acc, additional) => acc + (additional.quantity * additional.additional.price), 0));
             break;
           case 'other_product':
             const otherProduct = item.product as OtherProductOrder;
