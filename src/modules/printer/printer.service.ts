@@ -102,7 +102,7 @@ export class PrinterService {
           case 'ice_cream':
             const iceCream = item.product as IceCreamOrderDto;
             let iceCreamPrintItem = `${item.quantity}x Sorvete ${iceCream.price.toFixed(2)}`;
-            if (iceCream.flavors.length !== 0) {
+            if (iceCream.flavors) {
               iceCream.flavors.forEach(flavor => {
                 iceCreamPrintItem += `\n\t${flavor.iceCreamFlavor.name}`;
               });
