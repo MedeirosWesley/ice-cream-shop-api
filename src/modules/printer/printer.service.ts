@@ -313,30 +313,55 @@ export class PrinterService {
           console.error('Erro ao abrir a impressora:', error);
           return;
         }
-        printer
-          .align('CT')
-          .text('Kimolek')
-          .style('NORMAL')
-          .feed(1)
-          .text('---------- Ordem de Pedido ---------')
-          .feed(1)
-          .align('LT')
-          .font('A')
-          .text(`Número do Pedido: ${orderDetails.productId}`)
-          .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
-          .text(formatClient(orderDetails.clientName, orderDetails.client))
-          .drawLine()
-          .text(getToTake(orderDetails))
-          .text(formatItems(orderDetails.products, orderDetails.type))  // Lista os itens
-          .drawLine()
-          .feed(1)
-          .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
-          .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
-          .text(getChange(orderDetails))
-          .drawLine()
-          .feed(1)
-          .cut()
-          .close();
+        if (orderDetails.type === 'Delivery') {
+          printer
+            .align('CT')
+            .text('Kimolek')
+            .feed(1)
+            .text('---------- Ordem de Pedido ---------')
+            .feed(1)
+            .align('LT')
+            .text(`Número do Pedido: ${orderDetails.productId}`)
+            .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
+            .text(formatClient(orderDetails.clientName, orderDetails.client))
+            .drawLine()
+            .text(getToTake(orderDetails))
+            .text(formatItems(orderDetails.products, orderDetails.type))  // Lista os itens
+            .drawLine()
+            .feed(1)
+            .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
+            .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
+            .text(getChange(orderDetails))
+            .drawLine()
+            .feed(1)
+            .cut()
+            .text(orderDetails.client.name)
+            .cut()
+            .close();
+        } else {
+          printer
+            .align('CT')
+            .text('Kimolek')
+            .feed(1)
+            .text('---------- Ordem de Pedido ---------')
+            .feed(1)
+            .align('LT')
+            .text(`Número do Pedido: ${orderDetails.productId}`)
+            .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
+            .text(formatClient(orderDetails.clientName, orderDetails.client))
+            .drawLine()
+            .text(getToTake(orderDetails))
+            .text(formatItems(orderDetails.products, orderDetails.type))  // Lista os itens
+            .drawLine()
+            .feed(1)
+            .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
+            .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
+            .text(getChange(orderDetails))
+            .drawLine()
+            .feed(1)
+            .cut()
+            .close();
+        }
       });
     } catch (error) {
       console.error('Erro ao imprimir:', error);
