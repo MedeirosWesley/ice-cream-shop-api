@@ -126,7 +126,7 @@ export class PrinterService {
 
             let onSaleAcaiPrintItem = '';
 
-            const onSaleAcaiName = `${item.quantity}x Açaí PROMOÇÃO ${onSaleAcai.onSaleAcai.size.size.toFixed(0)} ml`;
+            const onSaleAcaiName = `${item.quantity * onSaleAcai.onSaleAcai.quantity}x Açaí PROMOÇÃO ${onSaleAcai.onSaleAcai.size.size.toFixed(0)} ml`;
             const onSaleAcaiPrice = `R$${(item.quantity * onSaleAcai.onSaleAcai.price).toFixed(2)}`;
             onSaleAcaiPrintItem += `${onSaleAcaiName} ${'.'.repeat(45 - onSaleAcaiName.length - onSaleAcaiPrice.length)} ${onSaleAcaiPrice}`;
             const additionalRemoved = new Set(onSaleAcai.additionalRemoved.map(item => item.additional.id));

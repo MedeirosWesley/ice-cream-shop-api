@@ -7,7 +7,7 @@ export class IceCreamOrder {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'decimal'})
   price: number;
 
   @OneToMany(() => IceCreamFlavorOrder, iceCreamFlavorOrder => iceCreamFlavorOrder.iceCreamOrder, { cascade: true })
