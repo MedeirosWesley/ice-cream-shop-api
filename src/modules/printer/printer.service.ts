@@ -15,8 +15,36 @@ import { IceCreamPotOrder } from '../ice-cream-pot-order/entities/ice-cream-pot-
 
 @Injectable()
 export class PrinterService {
-  async printOrder(orderDetails: OrderDto) {
+  async printName(name: string) {
+    try {
+      const device = await escposUSB.getDevice();
 
+      if (!device) {
+        console.error('Nenhuma impressora conectada');
+        return;
+      }
+
+      const options = { encoding: "CP860" }
+      const printer = new escpos.Printer(device, options);
+
+      device.open((error: any) => {
+        if (error) {
+          console.error('Erro ao abrir a impressora:', error);
+          return;
+        }
+        printer
+          .text(name)
+          .cut()
+          .close();
+      });
+    } catch (error) {
+      console.error('Erro ao imprimir:', error);
+    }
+  }
+
+
+
+  async printOrder(orderDetails: OrderDto) {
 
     if (orderDetails.type === 'Store' && (orderDetails.products.filter(item => item.status).length === 0)) {
       return;
