@@ -20,25 +20,25 @@ export class PrinterService {
       const device = await escposUSB.getDevice();
 
       if (!device) {
-        console.error('Nenhuma impressora conectada');
+        console.log('Nenhuma impressora conectada');
         return;
       }
 
       const options = { encoding: "CP860" }
-      const printer = new escpos.Printer(device, options);
+      var printer = new escpos.Printer(device, options);
 
       device.open((error: any) => {
         if (error) {
-          console.error('Erro ao abrir a impressora:', error);
+          console.log('Erro ao abrir a impressora:', error);
           return;
         }
-        printer
-          .text(name)
-          .cut()
-          .close();
+        printer.flush();
+        printer.text(name.replaceAll('-', ' '));
+        printer.cut();
+        return printer.close();
       });
     } catch (error) {
-      console.error('Erro ao imprimir:', error);
+      console.log('Erro ao imprimir:', error);
     }
   }
 
