@@ -172,8 +172,7 @@ export class PrinterService {
 
             if (onSaleAcai.additionalExtra.length !== 0) {
               onSaleAcaiPrintItem += '\n';
-              onSaleAcaiPrintItem += '.'.repeat(37);
-              onSaleAcaiPrintItem += '\n\tAdicionais Extras:\n';
+              onSaleAcaiPrintItem += '\n\t--------- Adicionais Extras ---------\n';
             }
 
 
@@ -183,8 +182,9 @@ export class PrinterService {
               const onSaleAcaiPrice = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}${(additional.quantity * additional.additional.price).toFixed(2)}`;
 
               const dots = '.'.repeat(37 - onSaleAcaiName.length - onSaleAcaiPrice.length);
-              onSaleAcaiPrintItem += `\n\t${onSaleAcaiName} ${dots} ${onSaleAcaiPrice}`;
+              onSaleAcaiPrintItem += `\t${onSaleAcaiName} ${dots} ${onSaleAcaiPrice}\n`;
             });
+            if (item.observation) onSaleAcaiPrintItem += `\nObservação: ${item.observation}`;
             return onSaleAcaiPrintItem;
 
           case 'other_product':
@@ -243,14 +243,18 @@ export class PrinterService {
     function formatClient(clientName: string, client: any) {
       let printClient = '';
       if (clientName) {
-        printClient += `Cliente: ${clientName}`;
+        printClient += `Cliente: ${clientName.charAt(0).toUpperCase() + clientName.slice(1)}`;
       }
       if (client) {
-        printClient += `Cliente: ${client.name}\n`;
+        const formatClientName = client.name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        const formatClientStreet = client.street.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        const formatClientNeighborhood = client.neighborhood.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        const formatClientReference = client.reference.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        printClient += `Cliente: ${formatClientName}\n`;
         printClient += `Telefone: ${client.phone}\n`;
-        printClient += `Endereço: ${client.street}, ${client.houseNumber} - ${client.neighborhood}\n`;
+        printClient += `Endereço: ${formatClientStreet}, ${client.houseNumber} - ${formatClientNeighborhood}\n`;
         if (client.reference) {
-          printClient += `Referência: ${client.reference}\n`;
+          printClient += `Referência: ${formatClientReference}\n`;
         }
       }
       return printClient;
@@ -341,32 +345,29 @@ export class PrinterService {
           console.error('Erro ao abrir a impressora:', error);
           return;
         }
-        if (orderDetails.type === 'Delivery') {
-          printer
+
+          if(orderDetails.type != 'Delivery' ) {
+            printer
             .align('CT')
             .text('Kimolek')
             .feed(1)
             .text('---------- Ordem de Pedido ---------')
             .feed(1)
             .align('LT')
-            .text(`Número do Pedido: ${orderDetails.productId}`)
+            .text(`Número do Pedido: ${orderDetails.productId % 100}`)
             .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
             .text(formatClient(orderDetails.clientName, orderDetails.client))
             .drawLine()
             .text(getToTake(orderDetails))
-            .text(formatItems(orderDetails.products, orderDetails.type))  // Lista os itens
+            .text(formatItems(orderDetails.products, orderDetails.type))  
             .drawLine()
             .feed(1)
-            .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
             .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
-            .text(getChange(orderDetails))
             .drawLine()
             .feed(1)
             .cut()
-            .text(orderDetails.client.name)
-            .cut()
-            .close();
-        } else {
+          }
+        
           printer
             .align('CT')
             .text('Kimolek')
@@ -374,7 +375,7 @@ export class PrinterService {
             .text('---------- Ordem de Pedido ---------')
             .feed(1)
             .align('LT')
-            .text(`Número do Pedido: ${orderDetails.productId}`)
+            .text(`Número do Pedido: ${orderDetails.productId % 100}`)
             .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
             .text(formatClient(orderDetails.clientName, orderDetails.client))
             .drawLine()
@@ -389,7 +390,7 @@ export class PrinterService {
             .feed(1)
             .cut()
             .close();
-        }
+        
       });
     } catch (error) {
       console.error('Erro ao imprimir:', error);
