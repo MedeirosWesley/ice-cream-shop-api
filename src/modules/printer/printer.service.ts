@@ -15,6 +15,16 @@ import { IceCreamPotOrder } from '../ice-cream-pot-order/entities/ice-cream-pot-
 
 @Injectable()
 export class PrinterService {
+
+  async openDevice(device: any): Promise<void> {
+    return new Promise((resolve, reject) => {
+      device.open((error: any) => {
+        if (error) return reject(error);
+        resolve();
+      });
+    });
+  }
+
   async printName(name: string) {
     try {
       const device = await escposUSB.getDevice();
@@ -338,60 +348,60 @@ export class PrinterService {
       }
 
       const options = { encoding: "CP860" }
+      await this.openDevice(device);
+
+
       const printer = new escpos.Printer(device, options);
 
-      device.open((error: any) => {
-        if (error) {
-          console.error('Erro ao abrir a impressora:', error);
-          return;
-        }
 
-          if(orderDetails.type != 'Delivery' ) {
-            printer
-            .align('CT')
-            .text('Kimolek')
-            .feed(1)
-            .text('---------- Ordem de Pedido ---------')
-            .feed(1)
-            .align('LT')
-            .text(`Número do Pedido: ${orderDetails.productId % 100}`)
-            .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
-            .text(formatClient(orderDetails.clientName, orderDetails.client))
-            .drawLine()
-            .text(getToTake(orderDetails))
-            .text(formatItems(orderDetails.products, orderDetails.type))  
-            .drawLine()
-            .feed(1)
-            .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
-            .drawLine()
-            .feed(1)
-            .cut()
-          }
-        
-          printer
-            .align('CT')
-            .text('Kimolek')
-            .feed(1)
-            .text('---------- Ordem de Pedido ---------')
-            .feed(1)
-            .align('LT')
-            .text(`Número do Pedido: ${orderDetails.productId % 100}`)
-            .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
-            .text(formatClient(orderDetails.clientName, orderDetails.client))
-            .drawLine()
-            .text(getToTake(orderDetails))
-            .text(formatItems(orderDetails.products, orderDetails.type))  // Lista os itens
-            .drawLine()
-            .feed(1)
-            .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
-            .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
-            .text(getChange(orderDetails))
-            .drawLine()
-            .feed(1)
-            .cut()
-            .close();
-        
-      });
+
+
+      if (orderDetails.type != 'Delivery') {
+        printer
+          .align('CT')
+          .text('Kimolek')
+          .feed(1)
+          .text('---------- Ordem de Pedido ---------')
+          .feed(1)
+          .align('LT')
+          .text(`Número do Pedido: ${orderDetails.productId % 100}`)
+          .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
+          .text(formatClient(orderDetails.clientName, orderDetails.client))
+          .drawLine()
+          .text(getToTake(orderDetails))
+          .text(formatItems(orderDetails.products, orderDetails.type))
+          .drawLine()
+          .feed(1)
+          .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
+          .drawLine()
+          .feed(1)
+          .cut()
+      }
+
+      printer
+        .align('CT')
+        .text('Kimolek')
+        .feed(1)
+        .text('---------- Ordem de Pedido ---------')
+        .feed(1)
+        .align('LT')
+        .text(`Número do Pedido: ${orderDetails.productId % 100}`)
+        .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
+        .text(formatClient(orderDetails.clientName, orderDetails.client))
+        .drawLine()
+        .text(getToTake(orderDetails))
+        .text(formatItems(orderDetails.products, orderDetails.type))  // Lista os itens
+        .drawLine()
+        .feed(1)
+        .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
+        .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
+        .text(getChange(orderDetails))
+        .drawLine()
+        .feed(1)
+        .cut()
+        .close();
+
+
     } catch (error) {
       console.error('Erro ao imprimir:', error);
     }
