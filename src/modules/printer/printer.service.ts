@@ -244,6 +244,9 @@ export class PrinterService {
     }
 
     function getChange(order: OrderDto) {
+      if(order.cashChange == 0){
+        return '';
+      }
       if (order.cashChange) {
         return `Troco para: R$${order.cashChange.toFixed(2)}\nValor do troco: R$${(order.cashChange - getTotal(order.products, order.type)).toFixed(2)}`;
       }
@@ -262,10 +265,14 @@ export class PrinterService {
         const formatClientReference = client.reference.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         printClient += `Cliente: ${formatClientName}\n`;
         printClient += `Telefone: ${client.phone}\n`;
-        printClient += `Endereço: ${formatClientStreet}, ${client.houseNumber} - ${formatClientNeighborhood}\n`;
-        if (client.reference) {
+        if(!client.neighborhood && !client.street){
+          printClient += `Endereço: ${formatClientReference}\n`;
+        }else {
+          printClient += `Endereço: ${formatClientStreet}, ${client.houseNumber} - ${formatClientNeighborhood}\n`;
+          if (client.reference) {
           printClient += `Referência: ${formatClientReference}\n`;
         }
+        }   
       }
       return printClient;
     }
