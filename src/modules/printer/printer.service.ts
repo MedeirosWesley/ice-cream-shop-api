@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import * as escpos from 'escpos';
 import * as escposUSB from 'escpos-usb';
 import { OrderDto } from '../order/dto/order.dto';
@@ -13,48 +13,79 @@ import { PopsiclesOrderDto } from '../popsicle-order/dto/popsicles-order.dto';
 import { IceCreamPotOrder } from '../ice-cream-pot-order/entities/ice-cream-pot-order.entity';
 
 
+
 @Injectable()
-export class PrinterService {
+export class PrinterService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(PrinterService.name);
+  private device: escposUSB.USB;
+  private printer: escpos.Printer;
 
-  async openDevice(device: any): Promise<void> {
-    return new Promise((resolve, reject) => {
-      device.open((error: any) => {
-        if (error) return reject(error);
-        resolve();
-      });
-    });
-  }
-
-  async printName(name: string) {
+  /**
+   * O NestJS chamará este método uma vez que o módulo for inicializado.
+   * É o lugar perfeito para configurar nossa impressora.
+   */
+  async onModuleInit() {
     try {
-      const device = await escposUSB.getDevice();
+      this.device = escposUSB.getDevice();
 
-      if (!device) {
-        console.log('Nenhuma impressora conectada');
+      if (!this.device) {
+        this.logger.warn('Nenhuma impressora USB encontrada. O serviço de impressão estará desativado.');
         return;
       }
 
-      const options = { encoding: "CP860" }
-      var printer = new escpos.Printer(device, options);
+      const options = { encoding: "CP860" };
+      this.printer = new escpos.Printer(this.device, options);
 
-      device.open((error: any) => {
+      this.device.open((error) => {
         if (error) {
-          console.log('Erro ao abrir a impressora:', error);
-          return;
+          this.logger.error('Erro ao abrir a conexão com a impressora:', error);
+          // Zera as instâncias para não tentar usar uma impressora com erro
+          this.device = null;
+          this.printer = null;
         }
-        printer.flush();
-        printer.text(name.replaceAll('-', ' '));
-        printer.cut();
-        return printer.close();
       });
     } catch (error) {
-      console.log('Erro ao imprimir:', error);
+      this.logger.error('Falha ao inicializar o dispositivo da impressora.', error);
+    }
+  }
+
+  /**
+   * O NestJS chamará este método quando a aplicação for encerrada.
+   * Garantimos que a conexão com a impressora seja fechada corretamente.
+   */
+  onModuleDestroy() {
+    if (this.printer) {
+      this.logger.log('Fechando conexão com a impressora.');
+      this.printer.close();
+    }
+  }
+
+  private checkPrinterReady(): boolean {
+    if (!this.printer) {
+      this.logger.warn('Tentativa de impressão, mas a impressora não está inicializada ou conectada.');
+      return false;
+    }
+    return true;
+  }
+
+  async printName(name: string) {
+    if (!this.checkPrinterReady()) return;
+
+    try {
+      this.printer
+        .flush()
+        .text(name.replaceAll('-', ' '))
+        .cut()
+        .close();
+    } catch (error) {
+      this.logger.error('Erro ao imprimir nome:', error);
     }
   }
 
 
 
   async printOrder(orderDetails: OrderDto) {
+    if (!this.checkPrinterReady()) return;
 
     if (orderDetails.type === 'Store' && (orderDetails.products.filter(item => item.status).length === 0)) {
       return;
@@ -340,24 +371,24 @@ export class PrinterService {
 
 
     try {
-      const device = await escposUSB.getDevice();
+      // const device = await escposUSB.getDevice();
 
-      if (!device) {
-        console.error('Nenhuma impressora conectada');
-        return;
-      }
+      // if (!device) {
+      //   console.error('Nenhuma impressora conectada');
+      //   return;
+      // }
 
-      const options = { encoding: "CP860" }
-      await this.openDevice(device);
+      // const options = { encoding: "CP860" }
+      // await this.openDevice(device);
 
 
-      const printer = new escpos.Printer(device, options);
+      // const printer = new escpos.Printer(device, options);
 
 
 
 
       if (orderDetails.type != 'Delivery') {
-        printer
+        this.printer
           .align('CT')
           .text('Kimolek')
           .feed(1)
@@ -378,7 +409,7 @@ export class PrinterService {
           .cut()
       }
 
-      printer
+      this.printer
         .align('CT')
         .text('Kimolek')
         .feed(1)
