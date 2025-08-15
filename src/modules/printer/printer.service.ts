@@ -49,10 +49,6 @@ export class PrinterService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * O NestJS chamará este método quando a aplicação for encerrada.
-   * Garantimos que a conexão com a impressora seja fechada corretamente.
-   */
   onModuleDestroy() {
     if (this.printer) {
       this.logger.log('Fechando conexão com a impressora.');
@@ -76,7 +72,7 @@ export class PrinterService implements OnModuleInit, OnModuleDestroy {
         .flush()
         .text(name.replaceAll('-', ' '))
         .cut()
-        .close();
+        .flush();
     } catch (error) {
       this.logger.error('Erro ao imprimir nome:', error);
     }
@@ -84,7 +80,7 @@ export class PrinterService implements OnModuleInit, OnModuleDestroy {
 
 
 
-  async printOrder(orderDetails: OrderDto) {
+  async printOrder(orderDetails: OrderDto, printAll: boolean) {
     if (!this.checkPrinterReady()) return;
 
     if (orderDetails.type === 'Store' && (orderDetails.products.filter(item => item.status).length === 0)) {
@@ -93,7 +89,7 @@ export class PrinterService implements OnModuleInit, OnModuleDestroy {
 
     function formatItems(items: ProductOrderDto[], type: string) {
       let itemsToPrint: ProductOrderDto[];
-      if (type === 'Delivery') {
+      if (type === 'Delivery' || printAll) {
         itemsToPrint = items;
       }
       else {
@@ -238,7 +234,7 @@ export class PrinterService implements OnModuleInit, OnModuleDestroy {
           default:
             return '';
         }
-      }).join(`\n===============================================\n\n`);
+      }).join(`\n-----------------------------------------------\n\n`);
 
       return print;
     }
@@ -394,27 +390,27 @@ export class PrinterService implements OnModuleInit, OnModuleDestroy {
 
 
 
-      if (orderDetails.type != 'Delivery') {
-        this.printer
-          .align('CT')
-          .text('Kimolek')
-          .feed(1)
-          .text('---------- Ordem de Pedido ---------')
-          .feed(1)
-          .align('LT')
-          .text(`Número do Pedido: ${orderDetails.productId % 100}`)
-          .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
-          .text(formatClient(orderDetails.clientName, orderDetails.client))
-          .drawLine()
-          .text(getToTake(orderDetails))
-          .text(formatItems(orderDetails.products, orderDetails.type))
-          .drawLine()
-          .feed(1)
-          .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
-          .drawLine()
-          .feed(1)
-          .cut()
-      }
+      // if (orderDetails.type != 'Delivery') {
+      //   this.printer
+      //     .align('CT')
+      //     .text('Kimolek')
+      //     .feed(1)
+      //     .text('---------- Ordem de Pedido ---------')
+      //     .feed(1)
+      //     .align('LT')
+      //     .text(`Número do Pedido: ${orderDetails.productId % 100}`)
+      //     .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
+      //     .text(formatClient(orderDetails.clientName, orderDetails.client))
+      //     .drawLine()
+      //     .text(getToTake(orderDetails))
+      //     .text(formatItems(orderDetails.products, orderDetails.type))
+      //     .drawLine()
+      //     .feed(1)
+      //     .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
+      //     .drawLine()
+      //     .feed(1)
+      //     .cut();
+      // }
 
       this.printer
         .align('CT')
@@ -437,7 +433,7 @@ export class PrinterService implements OnModuleInit, OnModuleDestroy {
         .drawLine()
         .feed(1)
         .cut()
-        .close();
+        .flush();
 
 
     } catch (error) {

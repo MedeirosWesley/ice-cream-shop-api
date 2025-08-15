@@ -14,7 +14,7 @@ export class OrderController {
   async create(@Body() createOrderDto: CreateOrderDto) {
     const order = await this.orderService.create(createOrderDto);
 
-    await this.printService.printOrder(OrderDto.fromEntity(await this.orderService.findOne(order.id)));
+    await this.printService.printOrder(OrderDto.fromEntity(await this.orderService.findOne(order.id)), false);
     return order;
   }
 
@@ -33,11 +33,25 @@ export class OrderController {
     return this.orderService.findOne(id);
   }
 
+  @Get(':id/print')
+  async print(@Param('id') id: string) {
+    const order = await this.orderService.findOne(id);
+    await this.printService.printOrder(OrderDto.fromEntity(order), true);
+    return order;
+  }
+
+  @Post(':id/close')
+  async close(@Param('id') id: string) {
+    const order = await this.orderService.close(id);
+
+    return order;
+  }
+
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
     const order = await this.orderService.update(id, updateOrderDto);
 
-    await this.printService.printOrder(OrderDto.fromEntity(await this.orderService.findOne(order.id)));
+    await this.printService.printOrder(OrderDto.fromEntity(await this.orderService.findOne(order.id)), false);
     return order;
   }
 

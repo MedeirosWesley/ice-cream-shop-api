@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
-import { Between, Like, Or, Repository } from 'typeorm';
+import { Between, Like, Not, Or, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AcaiService } from '../acai/acai.service';
 import { MilkShakeService } from '../milk-shake/milk-shake.service';
@@ -146,6 +146,7 @@ export class OrderService {
     const data = await this.orderRepository.find({
       where: {
         date: Between(startOfDay, endOfDay),
+        status: Not('closed'),
         type: type
       },
       relations: [
@@ -208,6 +209,18 @@ export class OrderService {
         'products.otherProductOrder.otherProduct',
       ],
     });
+  }
+
+  async close(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw new Error(`Order with id ${id} not found`);
+    }
+
+    order.status = 'closed';
+    order.amountPaid = order.amountPaid;
+    return this.orderRepository.save(order);
   }
 
   async update(id: string, updateOrderDto: UpdateOrderDto) {
