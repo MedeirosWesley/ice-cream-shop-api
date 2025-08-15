@@ -26,7 +26,7 @@ export class PrinterService implements OnModuleInit, OnModuleDestroy {
    */
   async onModuleInit() {
     try {
-      this.device = escposUSB.getDevice();
+      this.device = await escposUSB.getDevice();
 
       if (!this.device) {
         this.logger.warn('Nenhuma impressora USB encontrada. O serviço de impressão estará desativado.');
