@@ -15,64 +15,47 @@ import { IceCreamPotOrder } from '../ice-cream-pot-order/entities/ice-cream-pot-
 
 
 @Injectable()
-export class PrinterService implements OnModuleInit, OnModuleDestroy {
+export class PrinterService {
   private readonly logger = new Logger(PrinterService.name);
-  private device: escposUSB.USB;
-  private printer: escpos.Printer;
 
-  /**
-   * O NestJS chamará este método uma vez que o módulo for inicializado.
-   * É o lugar perfeito para configurar nossa impressora.
-   */
-  async onModuleInit() {
+  async printName(name: string) {
     try {
-      this.device = await escposUSB.getDevice();
+      const device = await escposUSB.getDevice();
 
-      if (!this.device) {
-        this.logger.warn('Nenhuma impressora USB encontrada. O serviço de impressão estará desativado.');
-        return;
+      if (!device) {
+        this.logger.warn('Nenhuma impressora USB encontrada.');
+        return false;
       }
 
       const options = { encoding: "CP860" };
-      this.printer = new escpos.Printer(this.device, options);
+      const printer = new escpos.Printer(device, options);
 
-      this.device.open((error) => {
-        if (error) {
-          this.logger.error('Erro ao abrir a conexão com a impressora:', error);
-          // Zera as instâncias para não tentar usar uma impressora com erro
-          this.device = null;
-          this.printer = null;
-        }
+      await new Promise((resolve, reject) => {
+        device.open((err) => {
+          if (err) {
+            this.logger.error('Erro ao abrir a conexão com a impressora:', err);
+            
+            reject(err);
+          } else {
+            resolve(null);
+          }
+        });
       });
-    } catch (error) {
-      this.logger.error('Falha ao inicializar o dispositivo da impressora.', error);
-    }
-  }
 
-  onModuleDestroy() {
-    if (this.printer) {
-      this.logger.log('Fechando conexão com a impressora.');
-      this.printer.close();
-    }
-  }
-
-  private checkPrinterReady(): boolean {
-    if (!this.printer) {
-      this.logger.warn('Tentativa de impressão, mas a impressora não está inicializada ou conectada.');
-      return false;
-    }
-    return true;
-  }
-
-  async printName(name: string) {
-    if (!this.checkPrinterReady()) return;
-
-    try {
-      this.printer
-        .flush()
+      printer
         .text(name.replaceAll('-', ' '))
-        .cut()
-        .flush();
+        .cut();
+        
+        await new Promise((resolve, reject) => {
+          printer.close((err) => {
+            if (err) {
+              this.logger.error('Erro ao dar close na impressora:', err);
+              reject(err);
+            } else {
+              resolve(null);
+            }
+          });
+        });
     } catch (error) {
       this.logger.error('Erro ao imprimir nome:', error);
     }
@@ -81,7 +64,6 @@ export class PrinterService implements OnModuleInit, OnModuleDestroy {
 
 
   async printOrder(orderDetails: OrderDto, printAll: boolean) {
-    if (!this.checkPrinterReady()) return;
 
     if (orderDetails.type === 'Store' && (orderDetails.products.filter(item => item.status).length === 0)) {
       return;
@@ -387,32 +369,52 @@ export class PrinterService implements OnModuleInit, OnModuleDestroy {
 
       // const printer = new escpos.Printer(device, options);
 
+      const device = await escposUSB.getDevice();
 
+      if (!device) {
+        this.logger.warn('Nenhuma impressora USB encontrada.');
+        return false;
+      }
 
+      const options = { encoding: "CP860" };
+      const printer = new escpos.Printer(device, options);
 
-      // if (orderDetails.type != 'Delivery') {
-      //   this.printer
-      //     .align('CT')
-      //     .text('Kimolek')
-      //     .feed(1)
-      //     .text('---------- Ordem de Pedido ---------')
-      //     .feed(1)
-      //     .align('LT')
-      //     .text(`Número do Pedido: ${orderDetails.productId % 100}`)
-      //     .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
-      //     .text(formatClient(orderDetails.clientName, orderDetails.client))
-      //     .drawLine()
-      //     .text(getToTake(orderDetails))
-      //     .text(formatItems(orderDetails.products, orderDetails.type))
-      //     .drawLine()
-      //     .feed(1)
-      //     .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
-      //     .drawLine()
-      //     .feed(1)
-      //     .cut();
-      // }
+      await new Promise((resolve, reject) => {
+        device.open((err) => {
+          if (err) {
+            this.logger.error('Erro ao abrir a conexão com a impressora:', err);
+            
+            reject(err);
+          } else {
+            resolve(null);
+          }
+        });
+      });
+      
 
-      this.printer
+      if (orderDetails.type != 'Delivery') {
+        printer
+          .align('CT')
+          .text('Kimolek')
+          .feed(1)
+          .text('---------- Ordem de Pedido ---------')
+          .feed(1)
+          .align('LT')
+          .text(`Número do Pedido: ${orderDetails.productId % 100}`)
+          .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
+          .text(formatClient(orderDetails.clientName, orderDetails.client))
+          .drawLine()
+          .text(getToTake(orderDetails))
+          .text(formatItems(orderDetails.products, orderDetails.type))
+          .drawLine()
+          .feed(1)
+          .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
+          .drawLine()
+          .feed(1)
+          .cut();
+      }
+
+      printer
         .align('CT')
         .text('Kimolek')
         .feed(1)
@@ -432,8 +434,18 @@ export class PrinterService implements OnModuleInit, OnModuleDestroy {
         .text(getChange(orderDetails))
         .drawLine()
         .feed(1)
-        .cut()
-        .flush();
+        .cut();
+        
+        await new Promise((resolve, reject) => {
+        printer.close((err) => {
+          if (err) {
+            this.logger.error('Erro ao dar close na impressora:', err);
+            reject(err);
+          } else {
+            resolve(null);
+          }
+        });
+      });
 
 
     } catch (error) {
