@@ -340,7 +340,7 @@ export class PrinterService {
         }
       });
       if (type === 'Delivery') {
-        total += 1.5;
+        total += 2;
       }
       return total
     }
