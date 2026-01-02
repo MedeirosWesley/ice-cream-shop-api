@@ -11,12 +11,126 @@ import { OnSaleAcaiOrder } from '../on-sale-acai-order/entities/on-sale-acai-ord
 import { OtherProductOrder } from '../other-product-order/entities/other-product-order.entity';
 import { PopsiclesOrderDto } from '../popsicle-order/dto/popsicles-order.dto';
 import { IceCreamPotOrder } from '../ice-cream-pot-order/entities/ice-cream-pot-order.entity';
+import * as jimp from 'jimp';
+import * as path from 'path';
+import * as os from 'os';
+import * as fs from 'fs';
 
 
 
 @Injectable()
 export class PrinterService {
+  async printImage(imageUrl: any) {
+    const escposImage = await new Promise<escpos.Image>((resolve, reject) => {
+      escpos.Image.load(imageUrl.imageUrl, (loadedImage) => {
+        if (loadedImage instanceof Error) {
+          console.log('Erro ao carregar a imagem para escpos:');
+          reject(new Error("Erro ao carregar a imagem para escpos"));
+          return;
+        }
+        resolve(loadedImage as escpos.Image);
+      });
+    });
+    const device = await escposUSB.getDevice();
+
+    if (!device) {
+      this.logger.warn('Nenhuma impressora USB encontrada.');
+      return false;
+    }
+
+    const options = { encoding: "CP860" };
+    const printer = new escpos.Printer(device, options);
+
+    await new Promise((resolve, reject) => {
+      device.open((err) => {
+        if (err) {
+          this.logger.error('Erro ao abrir a conexão com a impressora:', err);
+
+          reject(err);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+
+    printer
+      .image(escposImage, 'D24');
+    printer
+      .cut();
+
+    await new Promise((resolve, reject) => {
+      printer.close((err) => {
+        if (err) {
+          this.logger.error('Erro ao dar close na impressora:', err);
+          reject(err);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
   private readonly logger = new Logger(PrinterService.name);
+
+  async createImageForPrinter(texto): Promise<escpos.Image | null> {
+    try {
+
+      const width = 576;
+      const height = 100;
+
+
+      const image = await new jimp.Jimp({ width: width, height: height, color: '#FFFFFF' });
+      const filePath = path.resolve(__dirname, '../../../assets/roboto.fnt');
+      const font = await jimp.loadFont(filePath);
+
+
+      image.print({
+        font: font,
+        x: 0,
+        y: 0,
+        text: {
+          text: texto,
+          alignmentX: jimp.HorizontalAlign.CENTER,
+          alignmentY: jimp.VerticalAlign.MIDDLE,
+        },
+        maxWidth: width,
+        maxHeight: height
+      });
+
+      image.greyscale().contrast(1).dither().posterize(2);
+
+      // 1. Gerar caminho temporário
+      const tempDir = os.tmpdir();
+      const tempPath = path.join(tempDir, `print-image-${Date.now()}.png`);
+
+      // 2. Salvar a imagem no disco
+      await image.write(`${tempPath}.png`);
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+
+      const escposImage = await new Promise<escpos.Image>((resolve, reject) => {
+        escpos.Image.load(`${tempPath}.png`, (loadedImage) => {
+          if (loadedImage instanceof Error) {
+            console.log('Erro ao carregar a imagem para escpos:');
+            reject(new Error("Erro ao carregar a imagem para escpos"));
+            return;
+          }
+          resolve(loadedImage as escpos.Image);
+        });
+      });
+
+      fs.unlink(tempPath, () => { });
+
+      return escposImage;
+
+
+    } catch (error) {
+      console.error("Erro ao criar a imagem:", error);
+      return null;
+    }
+  }
+
+
 
   async printName(name: string) {
     try {
@@ -34,7 +148,7 @@ export class PrinterService {
         device.open((err) => {
           if (err) {
             this.logger.error('Erro ao abrir a conexão com a impressora:', err);
-            
+
             reject(err);
           } else {
             resolve(null);
@@ -42,20 +156,27 @@ export class PrinterService {
         });
       });
 
+      const image = await new Promise<escpos.Image>((resolve) => this.createImageForPrinter(name.replaceAll('-', ' ')).then(resolve));
+      if (!image) {
+        this.logger.error('Erro ao criar a imagem para impressão.');
+        return;
+      }
+
       printer
-        .text(name.replaceAll('-', ' '))
+        .image(image, 'D24');
+      printer
         .cut();
-        
-        await new Promise((resolve, reject) => {
-          printer.close((err) => {
-            if (err) {
-              this.logger.error('Erro ao dar close na impressora:', err);
-              reject(err);
-            } else {
-              resolve(null);
-            }
-          });
+
+      await new Promise((resolve, reject) => {
+        printer.close((err) => {
+          if (err) {
+            this.logger.error('Erro ao dar close na impressora:', err);
+            reject(err);
+          } else {
+            resolve(null);
+          }
         });
+      });
     } catch (error) {
       this.logger.error('Erro ao imprimir nome:', error);
     }
@@ -65,13 +186,14 @@ export class PrinterService {
 
   async printOrder(orderDetails: OrderDto, printAll: boolean) {
 
-    if (orderDetails.type === 'Store' && (orderDetails.products.filter(item => item.status).length === 0)) {
+
+    if (orderDetails.type === 'Store' && (orderDetails.products.filter(item => item.status).length === 0) && !printAll) {
       return;
     }
 
-    function formatItems(items: ProductOrderDto[], type: string) {
+    function formatItems(items: ProductOrderDto[], type: string, clientPrint: boolean = false) {
       let itemsToPrint: ProductOrderDto[];
-      if (type === 'Delivery' || printAll) {
+      if (type === 'Delivery' || printAll || orderDetails.isInStorePickup || clientPrint) {
         itemsToPrint = items;
       }
       else {
@@ -85,7 +207,7 @@ export class PrinterService {
 
             let acaiprintItem = '';
 
-            const name = `${item.quantity} x ${acai.isJuice ? 'Suco de ' : ''}Açaí ${acai.size.size.toFixed(0)} ml ${acai.inCup ? ' - (COPO)' : ''}`;
+            const name = `${item.quantity} x ${acai.isJuice ? 'Suco de ' : ''}Açaí ${acai.size.size.toFixed(0)} ml ${acai.inCup ? ' - (COPO)' : type === 'Delivery' || orderDetails.toTake || orderDetails.isInStorePickup || clientPrint || acai.isJuice ? '' : '(TIGELA)'}`;
             const price = `R$${(item.quantity * acai.size.price).toFixed(2)}`;
             acaiprintItem += `${name} ${'.'.repeat(45 - name.length - price.length)} ${price}`;
 
@@ -212,6 +334,7 @@ export class PrinterService {
             const otherProductName = `${item.quantity}x ${otherProduct.otherProduct.name}`;
             const otherProductPrice = `R$${(item.quantity * otherProduct.otherProduct.price).toFixed(2)}`;
             otherProductPrintItem += `${otherProductName} ${'.'.repeat(45 - otherProductName.length - otherProductPrice.length)} ${otherProductPrice}`;
+            if (item.observation) otherProductPrintItem += `\nObservação: ${item.observation}`;
             return otherProductPrintItem;
           default:
             return '';
@@ -253,7 +376,7 @@ export class PrinterService {
     }
 
     function getChange(order: OrderDto) {
-      if(order.cashChange == 0){
+      if (order.cashChange == 0) {
         return '';
       }
       if (order.cashChange) {
@@ -274,14 +397,14 @@ export class PrinterService {
         const formatClientReference = client.reference.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         printClient += `Cliente: ${formatClientName}\n`;
         printClient += `Telefone: ${client.phone}\n`;
-        if(!client.neighborhood && !client.street){
+        if (!client.neighborhood && !client.street) {
           printClient += `Endereço: ${formatClientReference}\n`;
-        }else {
+        } else {
           printClient += `Endereço: ${formatClientStreet}, ${client.houseNumber} - ${formatClientNeighborhood}\n`;
           if (client.reference) {
-          printClient += `Referência: ${formatClientReference}\n`;
+            printClient += `Referência: ${formatClientReference}\n`;
+          }
         }
-        }   
       }
       return printClient;
     }
@@ -289,6 +412,9 @@ export class PrinterService {
     function getToTake(order: OrderDto) {
       if (order.toTake) {
         return 'LEVAR';
+      }
+      if (order.isInStorePickup) {
+        return 'RETIRADA NO BALCÃO';
       }
       return ''
     }
@@ -383,36 +509,16 @@ export class PrinterService {
         device.open((err) => {
           if (err) {
             this.logger.error('Erro ao abrir a conexão com a impressora:', err);
-            
+
             reject(err);
           } else {
             resolve(null);
           }
         });
       });
-      
 
-      if (orderDetails.type != 'Delivery') {
-        printer
-          .align('CT')
-          .text('Kimolek')
-          .feed(1)
-          .text('---------- Ordem de Pedido ---------')
-          .feed(1)
-          .align('LT')
-          .text(`Número do Pedido: ${orderDetails.productId % 100}`)
-          .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
-          .text(formatClient(orderDetails.clientName, orderDetails.client))
-          .drawLine()
-          .text(getToTake(orderDetails))
-          .text(formatItems(orderDetails.products, orderDetails.type))
-          .drawLine()
-          .feed(1)
-          .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
-          .drawLine()
-          .feed(1)
-          .cut();
-      }
+
+
 
       printer
         .align('CT')
@@ -435,8 +541,45 @@ export class PrinterService {
         .drawLine()
         .feed(1)
         .cut();
-        
-        await new Promise((resolve, reject) => {
+
+      if (orderDetails.type != 'Delivery' && !printAll) {
+        printer
+          .align('CT')
+          .text('Kimolek')
+          .feed(1)
+          .text('---------- Ordem de Pedido ---------')
+          .feed(1)
+          .align('LT')
+          .text(`Número do Pedido: ${orderDetails.productId % 100}`)
+          .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
+          .text(formatClient(orderDetails.clientName, orderDetails.client))
+          .drawLine()
+          .text(getToTake(orderDetails))
+          .text(formatItems(orderDetails.products, orderDetails.type, true))  // Lista os itens
+          .drawLine()
+          .feed(1)
+          .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
+          .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
+          .text(getChange(orderDetails))
+          .drawLine()
+          .feed(1)
+          .cut();
+      }
+      // else {
+      //   const image = await new Promise<escpos.Image>((resolve) => this.createImageForPrinter(orderDetails.client.name.replaceAll('-', ' ')).then(resolve));
+      //     if (!image) {
+      //       this.logger.error('Erro ao criar a imagem para impressão.');
+      //       return;
+      //     }
+
+      //     printer
+      //       .image(image, 'D24');
+      //       printer
+      //       .cut();
+
+      // }
+
+      await new Promise((resolve, reject) => {
         printer.close((err) => {
           if (err) {
             this.logger.error('Erro ao dar close na impressora:', err);

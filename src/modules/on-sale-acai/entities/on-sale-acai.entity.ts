@@ -16,6 +16,8 @@ export class OnSaleAcai {
   @Column()
   quantity: number;
 
+
+
   @ManyToOne(() => IceCreamSize, { eager: true })
   @JoinColumn()
   size: IceCreamSize;

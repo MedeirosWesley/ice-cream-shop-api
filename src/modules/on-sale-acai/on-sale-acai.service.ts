@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateOnSaleAcaiDto } from './dto/create-on-sale-acai.dto';
 import { UpdateOnSaleAcaiDto } from './dto/update-on-sale-acai.dto';
 import { OnSaleAcai } from './entities/on-sale-acai.entity';
@@ -49,7 +49,11 @@ export class OnSaleAcaiService {
   }
 
   findAll() {
-    return this.onSaleAcaiRepository.find();
+    return this.onSaleAcaiRepository.find(
+      { relations: ['additionals', 'additionals.additional'] 
+          
+        }
+    );
   }
 
   findOne(id: string) {
@@ -99,6 +103,15 @@ export class OnSaleAcaiService {
   }
 
   async remove(id: string) {
-    await this.onSaleAcaiRepository.delete(id);
+  const acai = await this.onSaleAcaiRepository.findOne({
+    where: { id },
+    relations: ['additionals'], 
+  });
+
+  if (!acai) {
+    throw new NotFoundException('Açaí não encontrado');
   }
+
+  await this.onSaleAcaiRepository.remove(acai);
+}
 }

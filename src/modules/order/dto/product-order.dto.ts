@@ -13,6 +13,7 @@ export class ProductOrderDto {
   quantity: number;
   observation?: string;
   productType: string;
+  isPaid?: boolean;
   status: boolean;
   product: AcaiDto | MilkShakeDto | PopsiclesOrderDto | DrinkOrderDto | IceCreamOrderDto | IceCreamPotOrder | OnSaleAcaiOrder | OtherProductOrder | null;
 
@@ -22,6 +23,7 @@ export class ProductOrderDto {
     this.status = orderProduct.status;
     this.observation = orderProduct.observation;
     this.productType = orderProduct.productType;
+    this.isPaid = orderProduct.isPaid;
 
     switch (orderProduct.productType) {
       case 'acai':

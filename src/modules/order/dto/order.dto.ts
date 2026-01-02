@@ -9,6 +9,7 @@ export class OrderDto {
   productId: number;
   cashChange: number;
   toTake: boolean;
+  isInStorePickup: boolean;
   paymentMethod: string;
   motorcycleCourierId: string;
   products: ProductOrderDto[];
@@ -36,6 +37,7 @@ export class OrderDto {
     this.cashChange = order.cashChange;
     this.productId = order.productIndex;
     this.toTake = order.toTake;
+    this.isInStorePickup = order.isInStorePickup;
 
     this.products = order.products.map((product: any) => new ProductOrderDto(product));
   }

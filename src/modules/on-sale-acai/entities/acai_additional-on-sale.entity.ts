@@ -11,7 +11,8 @@ export class AcaiAdditionalOnSale {
   @JoinColumn()
   acai: OnSaleAcai;
 
-  @ManyToOne(() => Additional, { eager: true })
+  @ManyToOne(() => Additional, { eager: true,  onDelete: 'CASCADE', })
+
   @JoinColumn()
   additional: Additional;
 }

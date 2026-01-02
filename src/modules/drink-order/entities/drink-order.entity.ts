@@ -9,7 +9,7 @@ export class DrinkOrder {
   @Column()
   drinkId: string;
 
-  @ManyToOne(() => Drink, { eager: true })
+  @ManyToOne(() => Drink, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn()
   drink: Drink;
 }

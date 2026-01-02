@@ -28,6 +28,9 @@ export class Order {
   toTake: boolean;
 
   @Column({ nullable: true })
+  isInStorePickup: boolean;
+
+  @Column({ nullable: true })
   clientName: string;
 
   @Column({ nullable: true })

@@ -48,98 +48,107 @@ export class OrderService {
   ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
-    const order = new Order();
-    if (createOrderDto.client) {
-      order.client = await this.createOrUpdateClient(createOrderDto.client);
-    }
-    if (createOrderDto.clientName) {
-      order.clientName = createOrderDto.clientName;
-    }
-    order.clientId = createOrderDto.clientId ?? order.client?.id;
-    order.paymentMethod = createOrderDto.paymentMethod;
-    order.motorcycleCourierId = createOrderDto.motorcycleCourierId;
-    order.date = new Date();
-    order.status = OrderStatus.Pending;
-    order.amountPaid = 0;
-    order.cashChange = createOrderDto.cashChange;
-    order.toTake = createOrderDto.toTake;
-    order.type = getOrderTypeFromString(createOrderDto.type);
+    try {
 
 
-    const lastOrder = await this.orderRepository.findOne({
-      where: {},
-      order: { productIndex: 'DESC' },
-    });
-    const productIndex = lastOrder ? lastOrder.productIndex + 1 : 1;
-
-    order.productIndex = productIndex;
-
-
-    const products = [];
-    // let total = 0;
-
-    for (const createProduct of createOrderDto.products) {
-      const product = createProduct.product;
-      const orderProduct = this.orderProductRepository.create()
-      orderProduct.quantity = createProduct.quantity
-      orderProduct.observation = createProduct.observation
-      orderProduct.productType = product.type;
-      orderProduct.status = createProduct.status;
-      switch (product.type) {
-        case 'acai':
-          const acai = await this.acaiService.create(product.details as CreateAcaiDto)
-          orderProduct.acai = acai
-          products.push(orderProduct);
-
-          break;
-        case 'milk_shake':
-          const milkShake = await this.milkShakeService.create(product.details as CreateMilkShakeDto);
-          orderProduct.milkShake = milkShake;
-          products.push(orderProduct);
-
-          break;
-        case 'drink':
-          const drink = await this.drinkService.create(product.details as CreateDrinkOrderDto);
-          orderProduct.drink = drink;
-          products.push(orderProduct);
-          break;
-        case 'ice_cream':
-          const iceCream = await this.iceCreamService.create(product.details as CreateIceCreamOrderDto);
-          orderProduct.iceCream = iceCream;
-          products.push(orderProduct);
-          break;
-        case 'ice_cream_pot':
-          const IceCreamPot = await this.iceCreamPotService.create(product.details as CreateIceCreamPotOrderDto);
-          orderProduct.iceCreamPot = IceCreamPot;
-          products.push(orderProduct);
-          break;
-        case 'popsicle':
-          const popsicle = await this.popsicleService.create(product.details as CreatePopsiclesOrderDto);
-          orderProduct.popsicle = popsicle;
-          products.push(orderProduct);
-          break;
-        case 'on_sale_acai':
-          const onSaleAcai = await this.onSaleAcaiOrderService.create(product.details as CreateOnSaleAcaiOrderDto);
-          orderProduct.onSaleAcaiOrder = onSaleAcai;
-          products.push(orderProduct);
-          break;
-        case 'other_product':
-          const otherProduct = await this.outherProductOrderService.create(product.details as CreateOtherProductOrderDto);
-          orderProduct.otherProductOrder = otherProduct;
-          products.push(orderProduct);
-          break;
-        default:
-          throw new BadRequestException(`Invalid product type ${product}`);
+      const order = new Order();
+      if (createOrderDto.client) {
+        order.client = await this.createOrUpdateClient(createOrderDto.client);
       }
-    }
-    order.total = 0;
-    order.products = products;
+      if (createOrderDto.clientName) {
+        order.clientName = createOrderDto.clientName;
+      }
+      order.clientId = createOrderDto.clientId ?? order.client?.id;
+      order.paymentMethod = createOrderDto.paymentMethod;
+      order.motorcycleCourierId = createOrderDto.motorcycleCourierId;
+      order.date = new Date();
+      order.status = OrderStatus.Pending;
+      order.amountPaid = 0;
+      order.cashChange = createOrderDto.cashChange;
+      order.toTake = createOrderDto.toTake;
+      order.isInStorePickup = createOrderDto.isInStorePickup;
+      order.type = getOrderTypeFromString(createOrderDto.type);
 
-    return this.orderRepository.save(order);
+
+      const lastOrder = await this.orderRepository.findOne({
+        where: {},
+        order: { productIndex: 'DESC' },
+      });
+      const productIndex = lastOrder ? lastOrder.productIndex + 1 : 1;
+
+      order.productIndex = productIndex;
+
+
+      const products = [];
+      // let total = 0;
+
+      for (const createProduct of createOrderDto.products) {
+        const product = createProduct.product;
+        const orderProduct = this.orderProductRepository.create()
+        orderProduct.quantity = createProduct.quantity
+        orderProduct.observation = createProduct.observation
+        orderProduct.isPaid = false;
+        orderProduct.productType = product.type;
+        orderProduct.status = createProduct.status;
+        switch (product.type) {
+          case 'acai':
+            const acai = await this.acaiService.create(product.details as CreateAcaiDto)
+            orderProduct.acai = acai
+            products.push(orderProduct);
+
+            break;
+          case 'milk_shake':
+            const milkShake = await this.milkShakeService.create(product.details as CreateMilkShakeDto);
+            orderProduct.milkShake = milkShake;
+            products.push(orderProduct);
+
+            break;
+          case 'drink':
+            const drink = await this.drinkService.create(product.details as CreateDrinkOrderDto);
+            orderProduct.drink = drink;
+            products.push(orderProduct);
+            break;
+          case 'ice_cream':
+            const iceCream = await this.iceCreamService.create(product.details as CreateIceCreamOrderDto);
+            orderProduct.iceCream = iceCream;
+            products.push(orderProduct);
+            break;
+          case 'ice_cream_pot':
+            const IceCreamPot = await this.iceCreamPotService.create(product.details as CreateIceCreamPotOrderDto);
+            orderProduct.iceCreamPot = IceCreamPot;
+            products.push(orderProduct);
+            break;
+          case 'popsicle':
+            const popsicle = await this.popsicleService.create(product.details as CreatePopsiclesOrderDto);
+            orderProduct.popsicle = popsicle;
+            products.push(orderProduct);
+            break;
+          case 'on_sale_acai':
+            const onSaleAcai = await this.onSaleAcaiOrderService.create(product.details as CreateOnSaleAcaiOrderDto);
+            orderProduct.onSaleAcaiOrder = onSaleAcai;
+            products.push(orderProduct);
+            break;
+          case 'other_product':
+            const otherProduct = await this.outherProductOrderService.create(product.details as CreateOtherProductOrderDto);
+            orderProduct.otherProductOrder = otherProduct;
+            products.push(orderProduct);
+            break;
+          default:
+            throw new BadRequestException(`Invalid product type ${product}`);
+        }
+      }
+      order.total = 0;
+      order.products = products;
+
+      return this.orderRepository.save(order);
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async findAll(type: string) {
-    const startOfDay = moment().startOf('day').toDate(); // 2025-03-28 00:00:00
+    // const startOfDay = moment().subtract(1, 'days').startOf('day').toDate();  // Início do dia anterior
+    const startOfDay = moment().startOf('day').toDate();
     const endOfDay = moment().endOf('day').toDate();
 
 
@@ -177,6 +186,23 @@ export class OrderService {
       ],
     });
     return data.map(order => new OrderDto(order));
+  }
+
+  async setPaidProduct(productId: string) {
+    const product = await this.orderProductRepository.findOne({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      throw new Error('Produto não encontrado');
+    }
+
+
+    const result = await this.orderProductRepository.update(
+      product.id,
+      { isPaid: true }
+    );
+    return result;
   }
 
   findOne(id: string) {
@@ -254,6 +280,9 @@ export class OrderService {
     if (updateOrderDto.toTake !== null) {
       order.toTake = updateOrderDto.toTake;
     }
+    if (updateOrderDto.isInStorePickup !== null) {
+      order.isInStorePickup = updateOrderDto.isInStorePickup;
+    }
     if (updateOrderDto.cashChange !== null) {
       order.cashChange = updateOrderDto.cashChange;
     }
@@ -270,6 +299,7 @@ export class OrderService {
           const orderProduct = this.orderProductRepository.create()
           orderProduct.quantity = createProduct.quantity
           orderProduct.observation = createProduct.observation
+          orderProduct.isPaid = createProduct.isPaid ?? false;
           orderProduct.productType = product.type;
           orderProduct.status = createProduct.status;
           switch (product.type) {

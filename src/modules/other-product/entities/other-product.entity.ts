@@ -14,6 +14,8 @@ export class OtherProduct {
   @Column()
   type: number;
 
+
+
   @Column({ default: true })
   availability: boolean;
 }

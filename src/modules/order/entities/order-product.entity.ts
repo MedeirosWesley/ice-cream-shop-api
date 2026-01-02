@@ -21,13 +21,18 @@ export class OrderProduct {
   @Column({ nullable: true })
   observation: string;
 
+  @Column({ nullable: true })
+  isPaid: boolean;
+
   @Column()
   status: boolean;
 
   @Column()
   productType: string;
 
-  @ManyToOne(() => Order, order => order.products)
+  @ManyToOne(() => Order, order => order.products, {
+    onDelete: 'CASCADE',
+  })
   order: Order;
 
   @ManyToOne(() => Acai, { eager: true, nullable: true })
@@ -39,18 +44,18 @@ export class OrderProduct {
   @ManyToOne(() => PopsiclesOrder, popsicle => popsicle.popsicles, { nullable: true })
   popsicle: PopsiclesOrder;
 
-  @ManyToOne(() => DrinkOrder, { nullable: true })
+  @ManyToOne(() => DrinkOrder, { nullable: true, onDelete: 'CASCADE', })
   drink: DrinkOrder;
 
-  @ManyToOne(() => IceCreamOrder, { nullable: true })
+  @ManyToOne(() => IceCreamOrder, { nullable: true, onDelete: 'CASCADE', })
   iceCream: IceCreamOrder;
 
-  @ManyToOne(() => IceCreamPotOrder, { nullable: true })
+  @ManyToOne(() => IceCreamPotOrder, { nullable: true, onDelete: 'CASCADE', })
   iceCreamPot: IceCreamPotOrder;
 
-  @ManyToOne(() => OnSaleAcaiOrder, { nullable: true })
+  @ManyToOne(() => OnSaleAcaiOrder, { nullable: true, onDelete: 'CASCADE', })
   onSaleAcaiOrder: OnSaleAcaiOrder;
 
-  @ManyToOne(() => OtherProductOrder, { nullable: true })
+  @ManyToOne(() => OtherProductOrder, { nullable: true, onDelete: 'CASCADE', })
   otherProductOrder: OtherProductOrder;
 }

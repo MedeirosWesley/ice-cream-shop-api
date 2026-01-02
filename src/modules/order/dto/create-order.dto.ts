@@ -31,6 +31,10 @@ export class CreateOrderDto {
   @IsBoolean()
   toTake: boolean;
 
+  @IsOptional()
+  @IsBoolean()
+  isInStorePickup: boolean;
+
   @IsString()
   type: string;
 

@@ -10,7 +10,7 @@ export class OnSaleAcaiOrder {
   @Column()
   onSaleAcaiId: string;
 
-  @ManyToOne(() => OnSaleAcai, { eager: true })
+  @ManyToOne(() => OnSaleAcai, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn()
   onSaleAcai: OnSaleAcai;
 

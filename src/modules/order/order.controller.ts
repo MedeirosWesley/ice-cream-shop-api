@@ -40,6 +40,11 @@ export class OrderController {
     return order;
   }
 
+  @Post('mark_product_paid')
+  async markProductPaid(@Body('productId') productId: string) {
+    return this.orderService.setPaidProduct(productId);
+  }
+
   @Post(':id/close')
   async close(@Param('id') id: string) {
     const order = await this.orderService.close(id);

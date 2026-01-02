@@ -7,6 +7,9 @@ import { TypeOrmModule } from "@nestjs/typeorm";
       database: "db/sql.sqlite",
       synchronize: true,
       autoLoadEntities: true,
+      logging: ['error'],
+      // logging: ['error', 'query', 'schema'],
+      logger: 'advanced-console',
     }),
   ],
 })
