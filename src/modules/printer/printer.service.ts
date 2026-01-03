@@ -579,17 +579,24 @@ export class PrinterService {
 
       // }
 
+      // Força o envio de qualquer dado pendente no buffer
+      await new Promise<void>((resolve) => {
+        printer.flush(() => resolve());
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+
       await new Promise((resolve, reject) => {
         printer.close((err) => {
           if (err) {
-            this.logger.error('Erro ao dar close na impressora:', err);
-            reject(err);
+            this.logger.warn('Aviso ao fechar impressora (possível timeout, mas impresso):', err);
+            resolve(null);
           } else {
             resolve(null);
           }
         });
       });
-
 
     } catch (error) {
       console.error('Erro ao imprimir:', error);

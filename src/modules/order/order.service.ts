@@ -1,9 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
-import { Between, Like, Not, Or, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Between, DataSource, Like, Not, Or, Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { AcaiService } from '../acai/acai.service';
 import { MilkShakeService } from '../milk-shake/milk-shake.service';
 import { IceCreamOrderService } from '../ice-cream-order/ice-cream-order.service';
@@ -30,8 +30,10 @@ import { Client } from '../client/entities/client.entity';
 import moment from 'moment';
 
 @Injectable()
-export class OrderService {
+export class OrderService implements OnModuleInit {
   constructor(
+    @InjectDataSource()
+    private dataSource: DataSource,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderProduct)
@@ -46,6 +48,23 @@ export class OrderService {
     private readonly onSaleAcaiOrderService: OnSaleAcaiOrderService,
     private readonly outherProductOrderService: OtherProductOrderService,
   ) { }
+
+  // Esse método roda automaticamente quando o NestJS sobe
+  async onModuleInit() {
+    await this.dataSource.query(`
+        CREATE TRIGGER IF NOT EXISTS generate_order_index
+        AFTER INSERT ON "order"
+        BEGIN
+            UPDATE "order" 
+            SET productIndex = (
+                SELECT IFNULL(MAX(productIndex), 0) + 1 
+                FROM "order" 
+                WHERE id != NEW.id
+            )
+            WHERE id = NEW.id;
+        END;
+    `);
+  }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     try {
@@ -70,13 +89,13 @@ export class OrderService {
       order.type = getOrderTypeFromString(createOrderDto.type);
 
 
-      const lastOrder = await this.orderRepository.findOne({
-        where: {},
-        order: { productIndex: 'DESC' },
-      });
-      const productIndex = lastOrder ? lastOrder.productIndex + 1 : 1;
+      // const lastOrder = await this.orderRepository.findOne({
+      //   where: {},
+      //   order: { productIndex: 'DESC' },
+      // });
+      // const productIndex = lastOrder ? lastOrder.productIndex + 1 : 1;
 
-      order.productIndex = productIndex;
+      order.productIndex = 0; // Será atualizado pelo trigger do banco de dados
 
 
       const products = [];
