@@ -1,8 +1,8 @@
-import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
-import { Between, DataSource, Like, Not, Or, Repository } from 'typeorm';
+import { Between, DataSource, In, Like, Not, Or, Repository } from 'typeorm';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { AcaiService } from '../acai/acai.service';
 import { MilkShakeService } from '../milk-shake/milk-shake.service';
@@ -27,6 +27,8 @@ import { OtherProductOrderService } from '../other-product-order/other-product-o
 import { CreateOtherProductOrderDto } from '../other-product-order/dto/create-other-product-order.dto';
 import { CreateClientDto } from '../client/dto/create-client.dto';
 import { Client } from '../client/entities/client.entity';
+import { calculateProductsTotal, getDeliveryFee } from './utils/order-total';
+import { ORDER_RELATIONS } from './order-relations';
 import moment from 'moment';
 
 @Injectable()
@@ -106,7 +108,7 @@ export class OrderService implements OnModuleInit {
         const orderProduct = this.orderProductRepository.create()
         orderProduct.quantity = createProduct.quantity
         orderProduct.observation = createProduct.observation
-        orderProduct.isPaid = false;
+        orderProduct.isPaid = createProduct.isPaid ?? false;
         orderProduct.productType = product.type;
         orderProduct.status = createProduct.status;
         switch (product.type) {
@@ -156,17 +158,153 @@ export class OrderService implements OnModuleInit {
             throw new BadRequestException(`Invalid product type ${product}`);
         }
       }
-      order.total = 0;
       order.products = products;
 
-      return this.orderRepository.save(order);
+      const savedOrder = await this.orderRepository.save(order);
+
+      return await this.recalculateTotal(savedOrder.id);
     } catch (error) {
       console.log(error);
     }
   }
 
+  /**
+   * Recalcula e persiste o total do pedido.
+   * Precisa refazer o findOne porque as entidades devolvidas pelos sub-serviços
+   * (acai, drink, popsicle...) não trazem as relações de preço carregadas.
+   */
+  async recalculateTotal(id: string): Promise<Order> {
+    try {
+      return await this.applyOrderTotals(id);
+    } catch (error) {
+      // Um erro de precificação não pode fazer o pedido já salvo se perder
+      console.log('Erro ao calcular o total do pedido:', error);
+      return await this.findOne(id);
+    }
+  }
+
+  /** Versão que propaga o erro — usada pelo backfill, que precisa contabilizar falhas. */
+  private async applyOrderTotals(id: string): Promise<Order> {
+    const order = await this.findOne(id);
+
+    if (!order) {
+      return null;
+    }
+
+    const dto = OrderDto.fromEntity(order);
+    const deliveryFee = getDeliveryFee(dto.type, dto.isInStorePickup);
+    const total = calculateProductsTotal(dto.products) + deliveryFee;
+
+    await this.orderRepository.update(id, { total, deliveryFee });
+
+    order.total = total;
+    order.deliveryFee = deliveryFee;
+    return order;
+  }
+
+  /**
+   * Backfill: recalcula o total de todos os pedidos já existentes.
+   *
+   * Trabalha em lote de propósito: um findOne por pedido dispararia ~25 queries
+   * de relação cada um. Aqui cada lote é hidratado de uma vez (relationLoadStrategy
+   * 'query', que busca cada relação com um IN em vez de um JOIN cartesiano) e os
+   * UPDATEs vão todos dentro de uma transação — no SQLite isso troca N commits
+   * em disco por um só.
+   *
+   * Sem datas processa o histórico inteiro; com `startDate`/`endDate` processa
+   * só o intervalo, para dar para conferir o resultado período a período.
+   *
+   * ATENÇÃO: usa os preços ATUAIS dos produtos — pedidos antigos são
+   * reavaliados a preço de hoje. Rode com backup do banco e com a API parada.
+   */
+  async recalculateAllTotals(options: {
+    startDate?: Date;
+    endDate?: Date;
+    batchSize?: number;
+    onProgress?: (processed: number, totalOrders: number) => void;
+  } = {}): Promise<{
+    processed: number;
+    updated: number;
+    failed: number;
+    sum: number;
+    emptyOrders: number;
+  }> {
+    const { startDate, endDate, batchSize = 200, onProgress } = options;
+
+    const idsQuery = this.orderRepository
+      .createQueryBuilder('order')
+      .select('order.id', 'id')
+      .orderBy('order.date', 'ASC');
+
+    if (startDate && endDate) {
+      idsQuery.where('order.date BETWEEN :startDate AND :endDate', { startDate, endDate });
+    }
+
+    const rows = await idsQuery.getRawMany();
+
+    const ids: string[] = rows.map(row => row.id);
+
+    let processed = 0;
+    let updated = 0;
+    let failed = 0;
+    let sum = 0;
+    let emptyOrders = 0;
+
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batchIds = ids.slice(i, i + batchSize);
+
+      const orders = await this.orderRepository.find({
+        where: { id: In(batchIds) },
+        relations: ORDER_RELATIONS,
+        relationLoadStrategy: 'query',
+      });
+
+      const changes: { id: string; total: number; deliveryFee: number }[] = [];
+
+      for (const order of orders) {
+        try {
+          const dto = OrderDto.fromEntity(order);
+          const deliveryFee = getDeliveryFee(dto.type, dto.isInStorePickup);
+          const total = calculateProductsTotal(dto.products) + deliveryFee;
+
+          // Pedido sem nenhum item zera legitimamente — não é falha de cálculo.
+          if (dto.products.length === 0) {
+            emptyOrders++;
+          }
+
+          changes.push({ id: order.id, total, deliveryFee });
+          sum += total;
+        } catch (error) {
+          failed++;
+          console.log(`Falha ao recalcular o pedido ${order.id}:`, error);
+        }
+      }
+
+      if (changes.length) {
+        await this.dataSource.transaction(async manager => {
+          for (const change of changes) {
+            await manager.update(Order, change.id, {
+              total: change.total,
+              deliveryFee: change.deliveryFee,
+            });
+          }
+        });
+      }
+
+      updated += changes.length;
+      processed += batchIds.length;
+
+      if (onProgress) {
+        onProgress(processed, ids.length);
+      }
+    }
+
+    return { processed, updated, failed, sum, emptyOrders };
+  }
+
   async findAll(type: string) {
-    // const startOfDay = moment().subtract(1, 'days').startOf('day').toDate();  // Início do dia anterior
+    // const startOfDay = moment().subtract(4, 'days').startOf('day').toDate();  // Início do dia anterior
+    // const endOfDay = moment().subtract(4, 'days').endOf('day').toDate();  // Fim do dia anterior
     const startOfDay = moment().startOf('day').toDate();
     const endOfDay = moment().endOf('day').toDate();
 
@@ -177,32 +315,7 @@ export class OrderService implements OnModuleInit {
         status: Not('closed'),
         type: type
       },
-      relations: [
-        'products',
-        'products.popsicle',
-        'products.popsicle.popsicles',
-        'products.popsicle.popsicles.popsicle',
-        'products.acai',
-        'products.acai.additionals',
-        'products.milkShake',
-        'products.milkShake.flavors',
-        'products.milkShake.syrup',
-        'products.milkShake.additionals',
-        'products.drink',
-        'products.iceCream',
-        'products.iceCreamPot',
-        'motorcycleCourier',
-        'client',
-        'products.onSaleAcaiOrder',
-        'products.onSaleAcaiOrder.onSaleAcai',
-        'products.onSaleAcaiOrder.onSaleAcai.additionals',
-        'products.onSaleAcaiOrder.additionalExtra',
-        'products.onSaleAcaiOrder.additionalExtra.additional',
-        'products.onSaleAcaiOrder.additionalRemoved',
-        'products.onSaleAcaiOrder.additionalRemoved.additional',
-        'products.otherProductOrder',
-        'products.otherProductOrder.otherProduct',
-      ],
+      relations: ORDER_RELATIONS,
     });
     return data.map(order => new OrderDto(order));
   }
@@ -227,32 +340,7 @@ export class OrderService implements OnModuleInit {
   findOne(id: string) {
     return this.orderRepository.findOne({
       where: { id },
-      relations: [
-        'products',
-        'products.popsicle',
-        'products.popsicle.popsicles',
-        'products.popsicle.popsicles.popsicle',
-        'products.acai',
-        'products.acai.additionals',
-        'products.milkShake',
-        'products.milkShake.flavors',
-        'products.milkShake.syrup',
-        'products.milkShake.additionals',
-        'products.drink',
-        'products.iceCream',
-        'products.iceCreamPot',
-        'motorcycleCourier',
-        'client',
-        'products.onSaleAcaiOrder',
-        'products.onSaleAcaiOrder.onSaleAcai',
-        'products.onSaleAcaiOrder.onSaleAcai.additionals',
-        'products.onSaleAcaiOrder.additionalExtra',
-        'products.onSaleAcaiOrder.additionalExtra.additional',
-        'products.onSaleAcaiOrder.additionalRemoved',
-        'products.onSaleAcaiOrder.additionalRemoved.additional',
-        'products.otherProductOrder',
-        'products.otherProductOrder.otherProduct',
-      ],
+      relations: ORDER_RELATIONS,
     });
   }
 
@@ -266,6 +354,21 @@ export class OrderService implements OnModuleInit {
     order.status = 'closed';
     order.amountPaid = order.amountPaid;
     return this.orderRepository.save(order);
+  }
+
+  /// Só o nome exibido do pedido. Não toca no cadastro em `client`: a correção
+  /// vale para este pedido, não para o histórico do cliente.
+  async updateClientName(id: string, clientName: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw new NotFoundException(`Order with id ${id} not found`);
+    }
+
+    order.clientName = clientName.trim();
+    await this.orderRepository.save(order);
+
+    return new OrderDto(await this.findOne(id));
   }
 
   async update(id: string, updateOrderDto: UpdateOrderDto) {
@@ -375,7 +478,9 @@ export class OrderService implements OnModuleInit {
       console.log(error);
     }
 
-    return this.orderRepository.save(order);
+    const savedOrder = await this.orderRepository.save(order);
+
+    return await this.recalculateTotal(savedOrder.id);
   }
 
   async remove(id: string) {

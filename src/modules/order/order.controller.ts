@@ -1,14 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { UpdateOrderClientNameDto } from './dto/update-order-client-name.dto';
 import { PrinterService } from '../printer/printer.service';
 import { OrderDto } from './dto/order.dto';
 import { Or } from 'typeorm';
+import { SalesReportService } from './sales-report.service';
+import { SalesReportQueryDto } from './dto/sales-report-query.dto';
 
 @Controller('order')
 export class OrderController {
-  constructor(private readonly orderService: OrderService, private readonly printService: PrinterService) { }
+  constructor(
+    private readonly orderService: OrderService,
+    private readonly printService: PrinterService,
+    private readonly salesReportService: SalesReportService,
+  ) { }
 
   @Post()
   async create(@Body() createOrderDto: CreateOrderDto) {
@@ -21,6 +28,12 @@ export class OrderController {
   @Get('sales-summary')
   async getSalesSummary() {
     return await this.orderService.getSalesSummary();
+  }
+
+  // Precisa vir antes de @Get(':type'), senão o findAll engole a rota.
+  @Get('sales-report')
+  async getSalesReport(@Query() query: SalesReportQueryDto) {
+    return await this.salesReportService.getSalesReport(query);
   }
 
   @Get(':type')
@@ -50,6 +63,17 @@ export class OrderController {
     const order = await this.orderService.close(id);
 
     return order;
+  }
+
+  // Correção do nome do cliente no caixa. Não passa pelo @Patch(':id') de
+  // propósito: aquele reimprime o pedido, e trocar um nome errado não deve
+  // gastar um cupom.
+  @Patch(':id/client-name')
+  updateClientName(
+    @Param('id') id: string,
+    @Body() updateOrderClientNameDto: UpdateOrderClientNameDto,
+  ) {
+    return this.orderService.updateClientName(id, updateOrderClientNameDto.clientName);
   }
 
   @Patch(':id')

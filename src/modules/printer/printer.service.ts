@@ -15,12 +15,50 @@ import * as jimp from 'jimp';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
+import { printer as pt, types as PrinterTypes, CharacterSet } from 'node-thermal-printer';
+import { SerialPort } from 'serialport';
+import { calculateOrderTotal } from '../order/utils/order-total';
 
 
 
 @Injectable()
 export class PrinterService {
-  async printImage(imageUrl: any) {
+  private readonly useUSB = true;
+
+  // Fila de impressão: só um job por vez na impressora. O `usb` reaproveita o mesmo
+  // handle nativo para o mesmo aparelho, então dois pedidos simultâneos faziam um
+  // fechar o handle enquanto o outro ainda transferia — crash nativo que derrubava
+  // o processo depois de imprimir.
+  private queue: Promise<unknown> = Promise.resolve();
+
+  private enqueue<T>(job: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(job, job);
+    this.queue = run.catch(() => undefined); // uma falha não trava a fila
+    return run;
+  }
+
+  // Dá tempo do libusb/WinUSB soltar o handle antes do próximo getDevice().
+  private releaseDelay() {
+    return new Promise((resolve) => setTimeout(resolve, 300));
+  }
+
+  printImage(imageUrl: any) {
+    return this.enqueue(() => this.doPrintImage(imageUrl));
+  }
+
+  printName(name: string) {
+    return this.enqueue(() => this.doPrintName(name));
+  }
+
+  printViaComPort() {
+    return this.enqueue(() => this.doPrintViaComPort());
+  }
+
+  printOrder(orderDetails: OrderDto, printAll: boolean) {
+    return this.enqueue(() => this.doPrintOrder(orderDetails, printAll));
+  }
+
+  private async doPrintImage(imageUrl: any) {
     const escposImage = await new Promise<escpos.Image>((resolve, reject) => {
       escpos.Image.load(imageUrl.imageUrl, (loadedImage) => {
         if (loadedImage instanceof Error) {
@@ -39,24 +77,14 @@ export class PrinterService {
     }
 
     const options = { encoding: "CP860" };
+    // getDevice() já devolve o adaptador aberto.
     const printer = new escpos.Printer(device, options);
-
-    await new Promise((resolve, reject) => {
-      device.open((err) => {
-        if (err) {
-          this.logger.error('Erro ao abrir a conexão com a impressora:', err);
-
-          reject(err);
-        } else {
-          resolve(null);
-        }
-      });
-    });
 
     printer
       .image(escposImage, 'D24');
     printer
       .cut();
+
 
     await new Promise((resolve, reject) => {
       printer.close((err) => {
@@ -68,6 +96,7 @@ export class PrinterService {
         }
       });
     });
+    await this.releaseDelay();
   }
   private readonly logger = new Logger(PrinterService.name);
 
@@ -132,7 +161,7 @@ export class PrinterService {
 
 
 
-  async printName(name: string) {
+  private async doPrintName(name: string) {
     try {
       const device = await escposUSB.getDevice();
 
@@ -142,19 +171,8 @@ export class PrinterService {
       }
 
       const options = { encoding: "CP860" };
+      // getDevice() já devolve o adaptador aberto.
       const printer = new escpos.Printer(device, options);
-
-      await new Promise((resolve, reject) => {
-        device.open((err) => {
-          if (err) {
-            this.logger.error('Erro ao abrir a conexão com a impressora:', err);
-
-            reject(err);
-          } else {
-            resolve(null);
-          }
-        });
-      });
 
       const image = await new Promise<escpos.Image>((resolve) => this.createImageForPrinter(name.replaceAll('-', ' ')).then(resolve));
       if (!image) {
@@ -177,15 +195,59 @@ export class PrinterService {
           }
         });
       });
+      await this.releaseDelay();
     } catch (error) {
       this.logger.error('Erro ao imprimir nome:', error);
     }
   }
 
+  private async doPrintViaComPort() {
+    // 1. Configurar o gerador de buffer
+    let printer = new pt({
+      type: PrinterTypes.CUSTOM,
+      interface: 'serial',
+      removeSpecialCharacters: false,
+    });
 
 
-  async printOrder(orderDetails: OrderDto, printAll: boolean) {
+    printer.alignCenter();
+    printer.println("Kimolek");
+    printer.println('teste');
+    printer.cut();
 
+    const buffer = printer.getBuffer();
+
+    const port = new SerialPort({
+      path: 'COM4',
+      baudRate: 9600,
+    });
+
+    return new Promise((resolve, reject) => {
+      port.on('open', () => {
+        port.write(buffer, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            // Importante: esperar o dreno do buffer antes de fechar
+            port.drain(() => {
+              setTimeout(() => {
+                port.close();
+                resolve(true);
+              }, 500);
+            });
+          }
+        });
+      });
+
+      port.on('error', (err) => {
+        reject(err);
+      });
+    });
+  }
+
+
+
+  private async doPrintOrder(orderDetails: OrderDto, printAll: boolean) {
 
     if (orderDetails.type === 'Store' && (orderDetails.products.filter(item => item.status).length === 0) && !printAll) {
       return;
@@ -207,7 +269,7 @@ export class PrinterService {
 
             let acaiprintItem = '';
 
-            const name = `${item.quantity} x ${acai.isJuice ? 'Suco de ' : ''}Açaí ${acai.size.size.toFixed(0)} ml ${acai.inCup ? ' - (COPO)' : type === 'Delivery' || orderDetails.toTake || orderDetails.isInStorePickup || clientPrint || acai.isJuice ? '' : '(TIGELA)'}`;
+            const name = `${item.quantity} x ${acai.isJuice ? 'Suco de ' : ''}Açaí ${acai.size.size.toFixed(0)} ml ${acai.inCup ? ' - (COPO)' : type === 'Delivery' || orderDetails.toTake || orderDetails.isInStorePickup || printAll || clientPrint || acai.isJuice ? '' : '(TIGELA)'}`;
             const price = `R$${(item.quantity * acai.size.price).toFixed(2)}`;
             acaiprintItem += `${name} ${'.'.repeat(45 - name.length - price.length)} ${price}`;
 
@@ -271,7 +333,9 @@ export class PrinterService {
             return popsiclePrintItem;
           case 'drink':
             const drink = item.product as DrinkOrderDto;
-            return `${item.quantity}x ${drink.drink.name} .......... R$${(item.quantity * drink.drink.price).toFixed(2)}`;
+            const drinkName = `${item.quantity}x ${drink.drink.name}`;
+            const drinkPrice = `R$${(item.quantity * drink.drink.price).toFixed(2)}`;
+            return `${drinkName} ${'.'.repeat(45 - drinkName.length - drinkPrice.length)} ${drinkPrice}`;
           case 'ice_cream':
             const iceCream = item.product as IceCreamOrderDto;
             let iceCreamPrintItem = `${item.quantity}x Sorvete ${iceCream.price.toFixed(2)}`;
@@ -380,22 +444,27 @@ export class PrinterService {
         return '';
       }
       if (order.cashChange) {
-        return `Troco para: R$${order.cashChange.toFixed(2)}\nValor do troco: R$${(order.cashChange - getTotal(order.products, order.type)).toFixed(2)}`;
+        return `Troco para: R$${order.cashChange.toFixed(2)}\nValor do troco: R$${(order.cashChange - calculateOrderTotal(order.products, order.type, order.isInStorePickup)).toFixed(2)}`;
       }
       return '';
     }
 
     function formatClient(clientName: string, client: any) {
       let printClient = '';
+      // `clientName` é o nome do próprio pedido e vence o do cadastro: é ele que
+      // o caixa corrige na tela de pedidos. Sem isso, um pedido que tem os dois
+      // (entrega com retirada no balcão) sairia com duas linhas "Cliente:".
       if (clientName) {
-        printClient += `Cliente: ${clientName.charAt(0).toUpperCase() + clientName.slice(1)}`;
+        printClient += `Cliente: ${clientName.charAt(0).toUpperCase() + clientName.slice(1)}\n`;
       }
       if (client) {
         const formatClientName = client.name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         const formatClientStreet = client.street.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         const formatClientNeighborhood = client.neighborhood.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         const formatClientReference = client.reference.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-        printClient += `Cliente: ${formatClientName}\n`;
+        if (!clientName) {
+          printClient += `Cliente: ${formatClientName}\n`;
+        }
         printClient += `Telefone: ${client.phone}\n`;
         if (!client.neighborhood && !client.street) {
           printClient += `Endereço: ${formatClientReference}\n`;
@@ -420,58 +489,6 @@ export class PrinterService {
     }
 
 
-    function getTotal(items: ProductOrderDto[], type: string): number {
-      let total = 0;
-      items.forEach(item => {
-        switch (item.productType) {
-          case 'acai':
-            const acai = item.product as AcaiDto;
-            total += item.quantity * acai.size.price;
-            acai.additionals.forEach(additional => {
-              total += item.quantity * (additional.additional.price * additional.quantity);
-            });
-            break;
-          case 'milk_shake':
-            const milkShake = item.product as MilkShakeDto;
-            total += item.quantity * milkShake.size.price;
-            milkShake.additionals.forEach(additional => {
-              total += item.quantity * (additional.additional.price * additional.quantity);
-            });
-            break;
-          case 'popsicle':
-            const popsicle = item.product as PopsiclesOrderDto;
-            total += item.quantity * (popsicle.popsicles.reduce((acc, popsicle) => acc + (popsicle.popsicleQuantity * popsicle.popsicle.price), 0));
-            break;
-          case 'drink':
-            const drink = item.product as DrinkOrderDto;
-            total += item.quantity * drink.drink.price;
-            break;
-          case 'ice_cream':
-            const iceCream = item.product as IceCreamOrderDto;
-            total += item.quantity * iceCream.price;
-            break;
-          case 'ice_cream_pot':
-            const iceCreamPot = item.product as IceCreamPotOrder;
-            total += item.quantity * iceCreamPot.size.price;
-            break;
-          case 'on_sale_acai':
-            const onSaleAcai = item.product as OnSaleAcaiOrder;
-            total += item.quantity * (onSaleAcai.onSaleAcai.price + onSaleAcai.additionalExtra.reduce((acc, additional) => acc + (additional.quantity * additional.additional.price), 0));
-            break;
-          case 'other_product':
-            const otherProduct = item.product as OtherProductOrder;
-            total += item.quantity * otherProduct.otherProduct.price;
-          default:
-            break;
-        }
-      });
-      if (type === 'Delivery') {
-        total += 2;
-      }
-      return total
-    }
-
-
     // console.log(`Número do Pedido: ${orderDetails.productId}\n
     //   Data: ${formatDateTime(orderDetails.date.toString())}\n
     //   ${formatClient(orderDetails.clientName, orderDetails.client)}\n
@@ -482,124 +499,185 @@ export class PrinterService {
 
 
     try {
-      // const device = await escposUSB.getDevice();
-
-      // if (!device) {
-      //   console.error('Nenhuma impressora conectada');
-      //   return;
-      // }
-
-      // const options = { encoding: "CP860" }
-      // await this.openDevice(device);
-
-
-      // const printer = new escpos.Printer(device, options);
-
-      const device = await escposUSB.getDevice();
-
-      if (!device) {
-        this.logger.warn('Nenhuma impressora USB encontrada.');
-        return false;
-      }
-
-      const options = { encoding: "CP860" };
-      const printer = new escpos.Printer(device, options);
-
-      await new Promise((resolve, reject) => {
-        device.open((err) => {
-          if (err) {
-            this.logger.error('Erro ao abrir a conexão com a impressora:', err);
-
-            reject(err);
-          } else {
-            resolve(null);
+      if (this.useUSB) {
+        // ----------------------------------------------------------------------------
+        // IMPRESSÃO VIA USB
+        // ----------------------------------------------------------------------------
+        try {
+          const device = await escposUSB.getDevice();
+          if (!device) {
+            this.logger.warn('Nenhuma impressora USB encontrada.');
+            return false;
           }
-        });
-      });
 
+          const options = { encoding: "CP860" };
+          // getDevice() já devolve o adaptador aberto.
+          const printer = new escpos.Printer(device, options);
 
-
-
-      printer
-        .align('CT')
-        .text('Kimolek')
-        .feed(1)
-        .text('---------- Ordem de Pedido ---------')
-        .feed(1)
-        .align('LT')
-        .text(`Número do Pedido: ${orderDetails.productId % 100}`)
-        .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
-        .text(formatClient(orderDetails.clientName, orderDetails.client))
-        .drawLine()
-        .text(getToTake(orderDetails))
-        .text(formatItems(orderDetails.products, orderDetails.type))  // Lista os itens
-        .drawLine()
-        .feed(1)
-        .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
-        .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
-        .text(getChange(orderDetails))
-        .drawLine()
-        .feed(1)
-        .cut();
-
-      if (orderDetails.type != 'Delivery' && !printAll) {
-        printer
-          .align('CT')
-          .text('Kimolek')
-          .feed(1)
-          .text('---------- Ordem de Pedido ---------')
-          .feed(1)
-          .align('LT')
-          .text(`Número do Pedido: ${orderDetails.productId % 100}`)
-          .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
-          .text(formatClient(orderDetails.clientName, orderDetails.client))
-          .drawLine()
-          .text(getToTake(orderDetails))
-          .text(formatItems(orderDetails.products, orderDetails.type, true))  // Lista os itens
-          .drawLine()
-          .feed(1)
-          .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
-          .text(`Total: R$${getTotal(orderDetails.products, orderDetails.type).toFixed(2)}`)
-          .text(getChange(orderDetails))
-          .drawLine()
-          .feed(1)
-          .cut();
-      }
-      // else {
-      //   const image = await new Promise<escpos.Image>((resolve) => this.createImageForPrinter(orderDetails.client.name.replaceAll('-', ' ')).then(resolve));
-      //     if (!image) {
-      //       this.logger.error('Erro ao criar a imagem para impressão.');
-      //       return;
-      //     }
-
-      //     printer
-      //       .image(image, 'D24');
-      //       printer
-      //       .cut();
-
-      // }
-
-      // Força o envio de qualquer dado pendente no buffer
-      await new Promise<void>((resolve) => {
-        printer.flush(() => resolve());
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-
-      await new Promise((resolve, reject) => {
-        printer.close((err) => {
-          if (err) {
-            this.logger.warn('Aviso ao fechar impressora (possível timeout, mas impresso):', err);
-            resolve(null);
-          } else {
-            resolve(null);
+          // Via do Estabelecimento
+          if (!printAll) {
+            printer
+              .align('CT')
+              .text('Kimolek')
+              .feed(1)
+              .text('---------- Ordem de Pedido ---------')
+              .feed(1)
+              .align('LT')
+              .text(`Número do Pedido: ${orderDetails.productId % 100}`)
+              .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
+              .text(formatClient(orderDetails.clientName, orderDetails.client))
+              .drawLine()
+              .text(getToTake(orderDetails))
+              .text(formatItems(orderDetails.products, orderDetails.type).replace(/\t/g, '    '))
+              .drawLine()
+              .feed(1)
+              .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
+              .text(`Total: R$${calculateOrderTotal(orderDetails.products, orderDetails.type, orderDetails.isInStorePickup).toFixed(2)}`)
+              .text(getChange(orderDetails))
+              .drawLine()
+              .feed(1)
+              .cut();
           }
-        });
-      });
+
+          // Via do Cliente
+          if (orderDetails.type === 'Store' || printAll) {
+            printer
+              .align('CT')
+              .text('Kimolek')
+              .feed(1)
+              .text('---------- Ordem de Pedido ---------')
+              .feed(1)
+              .align('LT')
+              .text(`Número do Pedido: ${orderDetails.productId % 100}`)
+              .text(`Data: ${formatDateTime(orderDetails.date.toString())}`)
+              .text(formatClient(orderDetails.clientName, orderDetails.client))
+              .drawLine()
+              .text(getToTake(orderDetails))
+              .text(formatItems(orderDetails.products, orderDetails.type, true))
+              .drawLine()
+              .feed(1)
+              .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
+              .text(`Total: R$${calculateOrderTotal(orderDetails.products, orderDetails.type, orderDetails.isInStorePickup).toFixed(2)}`)
+              .text(getChange(orderDetails))
+              .drawLine()
+              .feed(1)
+              .cut();
+          }
+
+          // Força o envio de qualquer dado pendente no buffer
+          await new Promise<void>((resolve) => {
+            printer.flush(() => resolve());
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          await new Promise((resolve, reject) => {
+            printer.close((err) => {
+              if (err) {
+                this.logger.warn('Aviso ao fechar impressora (possível timeout, mas impresso):', err);
+                resolve(null);
+              } else {
+                resolve(null);
+              }
+            });
+          });
+          await this.releaseDelay();
+        } catch (usbError) {
+          console.error('Erro ao imprimir via USB:', usbError);
+        }
+      } else {
+        // ----------------------------------------------------------------------------
+        // IMPRESSÃO VIA BLUETOOTH (COM4)
+        // ----------------------------------------------------------------------------
+        for (let attempt = 1; attempt <= 5; attempt++) {
+          try {
+            const ptPrinter = new pt({
+              type: PrinterTypes.CUSTOM,
+              interface: 'serial',
+              characterSet: CharacterSet.PC860_PORTUGUESE,
+              removeSpecialCharacters: false,
+            });
+
+            // Via do Estabelecimento
+            if (!printAll) {
+              ptPrinter.alignCenter();
+              ptPrinter.println('Kimolek');
+              ptPrinter.println('');
+              ptPrinter.println('---------- Ordem de Pedido ---------');
+              ptPrinter.println('');
+              ptPrinter.alignLeft();
+              ptPrinter.println(`Número do Pedido: ${orderDetails.productId % 100}`);
+              ptPrinter.println(`Data: ${formatDateTime(orderDetails.date.toString())}`);
+              ptPrinter.println(formatClient(orderDetails.clientName, orderDetails.client));
+              ptPrinter.drawLine();
+              ptPrinter.println(getToTake(orderDetails));
+              ptPrinter.println(formatItems(orderDetails.products, orderDetails.type).replace(/\t/g, '    '));
+              ptPrinter.drawLine();
+              ptPrinter.println('');
+              ptPrinter.println(`${formatPaymentMethod(orderDetails.paymentMethod)}`);
+              ptPrinter.println(`Total: R$${calculateOrderTotal(orderDetails.products, orderDetails.type, orderDetails.isInStorePickup).toFixed(2)}`);
+              ptPrinter.println(getChange(orderDetails));
+              ptPrinter.drawLine();
+              ptPrinter.println('');
+              ptPrinter.cut();
+            }
+
+            // Via do Cliente
+            if (orderDetails.type === 'Store' || printAll) {
+              ptPrinter.alignCenter();
+              ptPrinter.println('Kimolek');
+              ptPrinter.println('');
+              ptPrinter.println('---------- Ordem de Pedido ---------');
+              ptPrinter.println('');
+              ptPrinter.alignLeft();
+              ptPrinter.println(`Número do Pedido: ${orderDetails.productId % 100}`);
+              ptPrinter.println(`Data: ${formatDateTime(orderDetails.date.toString())}`);
+              ptPrinter.println(formatClient(orderDetails.clientName, orderDetails.client));
+              ptPrinter.drawLine();
+              ptPrinter.println(getToTake(orderDetails));
+              ptPrinter.println(formatItems(orderDetails.products, orderDetails.type, true).replace(/\t/g, '    '));
+              ptPrinter.drawLine();
+              ptPrinter.println('');
+              ptPrinter.println(`${formatPaymentMethod(orderDetails.paymentMethod)}`);
+              ptPrinter.println(`Total: R$${calculateOrderTotal(orderDetails.products, orderDetails.type, orderDetails.isInStorePickup).toFixed(2)}`);
+              ptPrinter.println(getChange(orderDetails));
+              ptPrinter.drawLine();
+              ptPrinter.println('');
+              ptPrinter.cut();
+            }
+
+            const buffer = ptPrinter.getBuffer();
+            const port = new SerialPort({
+              path: 'COM4',
+              baudRate: 9600,
+            });
+
+            await new Promise((resolve, reject) => {
+              port.on('open', () => {
+                port.write(buffer, (err) => {
+                  if (err) return reject(err);
+                  port.drain(() => {
+                    setTimeout(() => {
+                      port.close();
+                      resolve(true);
+                    }, 500);
+                  });
+                });
+              });
+              port.on('error', (err) => reject(err));
+            });
+            break; // Sucesso, sai do loop
+          } catch (btError) {
+            console.error(`Erro ao imprimir via Bluetooth (COM4) - Tentativa ${attempt} de 5:`, btError);
+            if (attempt < 5) {
+              await new Promise((resolve) => setTimeout(resolve, 300));
+            }
+          }
+        }
+      }
 
     } catch (error) {
-      console.error('Erro ao imprimir:', error);
+      console.error('Erro geral ao imprimir:', error);
     }
   }
 }

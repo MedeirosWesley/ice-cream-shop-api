@@ -21,7 +21,7 @@ export class Order {
   date: Date;
 
 
-  @Column({ nullable: true })
+  @Column({ type: 'decimal', nullable: true })
   cashChange: number;
 
   @Column({ nullable: true })
@@ -39,11 +39,14 @@ export class Order {
   @Column({ nullable: true })
   type: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'decimal', nullable: true })
   amountPaid: number;
 
   @Column({ type: 'decimal', nullable: true })
   total: number;
+
+  @Column({ type: 'decimal', nullable: true })
+  deliveryFee: number;
 
   @Column({ nullable: true })
   motorcycleCourierId: string;

@@ -15,10 +15,11 @@ import { OrderProduct } from './entities/order-product.entity';
 import { ClientModule } from '../client/client.module';
 import { OnSaleAcaiOrderModule } from '../on-sale-acai-order/on-sale-acai-order.module';
 import { OtherProductOrderModule } from '../other-product-order/other-product-order.module';
+import { SalesReportService } from './sales-report.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Order, OrderProduct]), AcaiModule, MilkShakeModule, IceCreamOrderModule, IceCreamPotOrderModule, PopsicleOrderModule, DrinkOrderModule, PrinterModule, ClientModule, OnSaleAcaiOrderModule, OtherProductOrderModule],
   controllers: [OrderController],
-  providers: [OrderService],
+  providers: [OrderService, SalesReportService],
 })
 export class OrderModule { }

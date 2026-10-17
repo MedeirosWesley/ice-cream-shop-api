@@ -8,5 +8,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   imports: [TypeOrmModule.forFeature([MotorcycleCourier])],
   controllers: [MotorcycleCourierController],
   providers: [MotorcycleCourierService],
+  exports: [MotorcycleCourierService],
 })
 export class MotorcycleCourierModule { }

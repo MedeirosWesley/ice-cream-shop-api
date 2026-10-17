@@ -7,4 +7,7 @@ export class MotorcycleCourier {
 
   @Column()
   name: string;
+
+  @Column({ nullable: true })
+  phone: string;
 }

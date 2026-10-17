@@ -19,6 +19,8 @@ export class OrderDto {
   status: string;
   type: string;
   amountPaid: number;
+  total: number;
+  deliveryFee: number;
   date: string;
 
 
@@ -33,6 +35,9 @@ export class OrderDto {
     this.status = order.status;
     this.type = order.type;
     this.amountPaid = order.amountPaid;
+    // Colunas decimal voltam como string no SQLite
+    this.total = Number(order.total ?? 0);
+    this.deliveryFee = Number(order.deliveryFee ?? 0);
     this.date = order.date.toISOString();
     this.cashChange = order.cashChange;
     this.productId = order.productIndex;
