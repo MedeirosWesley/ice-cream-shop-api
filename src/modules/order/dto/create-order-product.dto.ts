@@ -64,6 +64,10 @@ export class CreateOrderProduct {
   @IsBoolean()
   isPaid?: boolean;
 
+  @IsOptional()
+  @IsBoolean()
+  toTake?: boolean;
+
   // @Validate(IsProductValidConstraint)
   product: CreateProductDto;
 }

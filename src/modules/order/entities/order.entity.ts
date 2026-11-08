@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn, BeforeInsert, getRepository } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn, BeforeInsert, getRepository, Index } from 'typeorm';
 import { OrderProduct } from './order-product.entity';
 import { MotorcycleCourier } from 'src/modules/motorcycle_courier/entities/motorcycle_courier.entity';
 import { Client } from 'src/modules/client/entities/client.entity';
@@ -50,6 +50,15 @@ export class Order {
 
   @Column({ nullable: true })
   motorcycleCourierId: string;
+
+  // Gerada no app para pedidos que podem ser reenviados. Nula nos antigos.
+  @Index({ unique: true })
+  @Column({ type: 'varchar', nullable: true })
+  idempotencyKey: string | null;
+
+  // Preenchida ao reservar a impressão, para o cupom sair uma única vez.
+  @Column({ type: 'datetime', nullable: true })
+  printClaimedAt: Date | null;
 
   @ManyToOne(() => Client, { eager: true })
   @JoinColumn()

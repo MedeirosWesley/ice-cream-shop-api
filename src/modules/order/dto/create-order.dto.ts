@@ -1,4 +1,4 @@
-import { IsArray, IsBoolean, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsDateString, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
 import { OrderProduct } from "../entities/order-product.entity";
 import { Type } from "class-transformer";
 import { CreateOrderProduct } from "./create-order-product.dto";
@@ -45,6 +45,23 @@ export class CreateOrderDto {
   @IsOptional()
   @IsNumber()
   amountPaid: number;
+
+  @IsOptional()
+  @IsUUID()
+  idempotencyKey?: string;
+
+  @IsOptional()
+  @IsDateString()
+  clientCreatedAt?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  skipPrint?: boolean;
+
+  // Só vale com idempotencyKey: o caixa marcou o pedido como pago no aparelho.
+  @IsOptional()
+  @IsBoolean()
+  paidInFull?: boolean;
 
   @IsOptional()
   @IsString()

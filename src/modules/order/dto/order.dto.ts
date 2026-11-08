@@ -22,10 +22,12 @@ export class OrderDto {
   total: number;
   deliveryFee: number;
   date: string;
+  idempotencyKey: string | null;
 
 
   constructor(order: Order) {
     this.id = order.id;
+    this.idempotencyKey = order.idempotencyKey ?? null;
     this.clientId = order.clientId;
     this.paymentMethod = order.paymentMethod;
     this.motorcycleCourierId = order.motorcycleCourierId;

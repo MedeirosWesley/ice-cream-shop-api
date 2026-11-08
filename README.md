@@ -45,6 +45,19 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Iniciar com o Windows
+
+```bash
+# compila e registra a API para subir ao fazer login (janela minimizada)
+$ npm run build
+$ npm run startup:install
+
+# para remover da inicialização
+$ npm run startup:uninstall
+```
+
+O atalho fica na pasta Inicializar (`shell:startup`) e executa `scripts/start-api.bat`, que roda `node dist/main.js` a partir da raiz do projeto e reinicia a API se ela cair.
+
 ## Test
 
 ```bash

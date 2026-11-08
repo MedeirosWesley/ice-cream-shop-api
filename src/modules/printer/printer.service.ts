@@ -17,13 +17,45 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { printer as pt, types as PrinterTypes, CharacterSet } from 'node-thermal-printer';
 import { SerialPort } from 'serialport';
-import { calculateOrderTotal } from '../order/utils/order-total';
+import { calculateItemTotal, calculateOrderTotal } from '../order/utils/order-total';
+import { env } from '../config/env';
+import { Order } from '../order/entities/order.entity';
+import { cleanDisplay, normalizeKey, toTitleCase } from '../client/utils/address-normalize';
 
+// Pontilhado entre nome e preço. Nome comprido deixava a conta negativa e o
+// repeat() lançava RangeError, derrubando o cupom inteiro.
+function fillDots(count: number) {
+  return '.'.repeat(Math.max(1, count));
+}
 
+/** Linha do cupom de rota: texto (centralizado ou não) ou separador. */
+type RouteLine = { text?: string; center?: boolean; rule?: boolean };
+
+function routeMoney(value: number) {
+  return `R$${value.toFixed(2)}`;
+}
+
+function routeDateTime(date: Date) {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function routePaymentMethod(paymentMethod: string) {
+  switch (paymentMethod) {
+    case 'money':
+      return 'Dinheiro';
+    case 'credit_card':
+      return 'Cartão';
+    case 'pix':
+      return 'PIX';
+    default:
+      return '';
+  }
+}
 
 @Injectable()
 export class PrinterService {
-  private readonly useUSB = true;
+  private readonly useUSB = env.printerUseUsb;
 
   // Fila de impressão: só um job por vez na impressora. O `usb` reaproveita o mesmo
   // handle nativo para o mesmo aparelho, então dois pedidos simultâneos faziam um
@@ -42,7 +74,7 @@ export class PrinterService {
     return new Promise((resolve) => setTimeout(resolve, 300));
   }
 
-  printImage(imageUrl: any) {
+  printImage(imageUrl: string) {
     return this.enqueue(() => this.doPrintImage(imageUrl));
   }
 
@@ -58,9 +90,183 @@ export class PrinterService {
     return this.enqueue(() => this.doPrintOrder(orderDetails, printAll));
   }
 
-  private async doPrintImage(imageUrl: any) {
+  /** Cupom da rota de entrega: pedidos agrupados por bairro, para o entregador. */
+  printDeliveryRoute(orders: Order[], courierName?: string) {
+    return this.enqueue(() => this.doPrintDeliveryRoute(orders, courierName));
+  }
+
+  /** Monta as linhas do cupom de rota (independente do tipo de impressora). */
+  private buildDeliveryRouteLines(orders: Order[], courierName?: string): RouteLine[] {
+    const lines: RouteLine[] = [];
+    const center = (text: string) => lines.push({ text, center: true });
+    const left = (text: string) => lines.push({ text });
+    const rule = () => lines.push({ rule: true });
+
+    center(env.storeName);
+    center('ROTA DE ENTREGA');
+    if (courierName) center(`Entregador: ${toTitleCase(courierName)}`);
+    center(routeDateTime(new Date()));
+    rule();
+
+    // Agrupa pela chave normalizada; o título usa a primeira grafia encontrada.
+    const groups = new Map<string, { title: string; items: OrderDto[] }>();
+    for (const order of orders) {
+      const dto = OrderDto.fromEntity(order);
+      const neighborhood = order.client?.neighborhood;
+      const key = normalizeKey(neighborhood);
+      if (!groups.has(key)) {
+        groups.set(key, { title: cleanDisplay(neighborhood) || 'Sem bairro', items: [] });
+      }
+      groups.get(key).items.push(dto);
+    }
+    const sortedKeys = [...groups.keys()].sort((a, b) => {
+      if (!a) return 1; // "Sem bairro" por último
+      if (!b) return -1;
+      return a.localeCompare(b, 'pt-BR');
+    });
+
+    let grandTotal = 0;
+    let grandMissing = 0;
+    for (const key of sortedKeys) {
+      const group = groups.get(key);
+      const count = group.items.length;
+      left(`${group.title.toLocaleUpperCase('pt-BR')} (${count} ${count === 1 ? 'pedido' : 'pedidos'})`);
+      rule();
+      for (const order of group.items) {
+        const client = order.client;
+        const name = toTitleCase(order.clientName || client?.name || 'Cliente');
+        left(`#${order.productId ?? '-'} ${name}`);
+        const street = cleanDisplay(client?.street);
+        if (street) {
+          const number = cleanDisplay(client?.houseNumber);
+          left(`  ${toTitleCase(street)}${number ? `, ${number}` : ''}`);
+        }
+        const reference = cleanDisplay(client?.reference);
+        if (reference) left(`  Ref: ${reference}`);
+
+        const total = calculateOrderTotal(order.products, order.deliveryFee);
+        const paid = Number(order.amountPaid) || 0;
+        grandTotal += total;
+        left(`  Total: ${routeMoney(total)}`);
+        const payment = routePaymentMethod(order.paymentMethod);
+        if (payment) left(`  Pagamento: ${payment}`);
+        const cashChange = Number(order.cashChange) || 0;
+        if (cashChange > 0) {
+          left(`  Troco para ${routeMoney(cashChange)} (troco ${routeMoney(Math.max(0, cashChange - (total - paid)))})`);
+        }
+        if (paid < total - 0.004) {
+          grandMissing += total - paid;
+          left(`  Falta ${routeMoney(total - paid)}${paid > 0 ? ` (pago ${routeMoney(paid)})` : ''}`);
+        } else if (total > 0) {
+          left('  PAGO');
+        }
+        left('');
+      }
+    }
+
+    rule();
+    left(`Pedidos: ${orders.length}`);
+    left(`Total: ${routeMoney(grandTotal)}`);
+    if (grandMissing > 0.004 && Math.abs(grandMissing - grandTotal) > 0.004) {
+      left(`A receber: ${routeMoney(grandMissing)}`);
+    }
+    rule();
+    return lines;
+  }
+
+  private async doPrintDeliveryRoute(orders: Order[], courierName?: string) {
+    const lines = this.buildDeliveryRouteLines(orders, courierName);
+
+    if (this.useUSB) {
+      try {
+        const device = await escposUSB.getDevice();
+        if (!device) {
+          this.logger.warn('Nenhuma impressora USB encontrada.');
+          return false;
+        }
+        // getDevice() já devolve o adaptador aberto.
+        const printer = new escpos.Printer(device, { encoding: 'CP860' });
+        for (const line of lines) {
+          if (line.rule) {
+            printer.drawLine();
+          } else {
+            printer.align(line.center ? 'CT' : 'LT').text(line.text);
+          }
+        }
+        printer.feed(2).cut();
+
+        await new Promise<void>((resolve) => {
+          printer.flush(() => resolve());
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => {
+          printer.close((err) => {
+            if (err) {
+              this.logger.warn('Aviso ao fechar impressora (possível timeout, mas impresso):', err);
+            }
+            resolve(null);
+          });
+        });
+        await this.releaseDelay();
+      } catch (usbError) {
+        console.error('Erro ao imprimir rota via USB:', usbError);
+      }
+      return;
+    }
+
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        const ptPrinter = new pt({
+          type: PrinterTypes.CUSTOM,
+          interface: 'serial',
+          characterSet: CharacterSet.PC860_PORTUGUESE,
+          removeSpecialCharacters: false,
+        });
+        for (const line of lines) {
+          if (line.rule) {
+            ptPrinter.drawLine();
+          } else {
+            if (line.center) ptPrinter.alignCenter();
+            else ptPrinter.alignLeft();
+            ptPrinter.println(line.text);
+          }
+        }
+        ptPrinter.println('');
+        ptPrinter.cut();
+
+        const buffer = ptPrinter.getBuffer();
+        const port = new SerialPort({
+          path: env.printerSerialPort,
+          baudRate: 9600,
+        });
+
+        await new Promise((resolve, reject) => {
+          port.on('open', () => {
+            port.write(buffer, (err) => {
+              if (err) return reject(err);
+              port.drain(() => {
+                setTimeout(() => {
+                  port.close();
+                  resolve(true);
+                }, 500);
+              });
+            });
+          });
+          port.on('error', (err) => reject(err));
+        });
+        break; // Sucesso, sai do loop
+      } catch (btError) {
+        console.error(`Erro ao imprimir rota via serial (${env.printerSerialPort}) - Tentativa ${attempt} de 5:`, btError);
+        if (attempt < 5) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+      }
+    }
+  }
+
+  private async doPrintImage(imageUrl: string) {
     const escposImage = await new Promise<escpos.Image>((resolve, reject) => {
-      escpos.Image.load(imageUrl.imageUrl, (loadedImage) => {
+      escpos.Image.load(imageUrl, (loadedImage) => {
         if (loadedImage instanceof Error) {
           console.log('Erro ao carregar a imagem para escpos:');
           reject(new Error("Erro ao carregar a imagem para escpos"));
@@ -132,13 +338,10 @@ export class PrinterService {
       const tempPath = path.join(tempDir, `print-image-${Date.now()}.png`);
 
       // 2. Salvar a imagem no disco
-      await image.write(`${tempPath}.png`);
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      await image.write(tempPath as `${string}.png`);
 
       const escposImage = await new Promise<escpos.Image>((resolve, reject) => {
-        escpos.Image.load(`${tempPath}.png`, (loadedImage) => {
+        escpos.Image.load(tempPath, (loadedImage) => {
           if (loadedImage instanceof Error) {
             console.log('Erro ao carregar a imagem para escpos:');
             reject(new Error("Erro ao carregar a imagem para escpos"));
@@ -211,14 +414,14 @@ export class PrinterService {
 
 
     printer.alignCenter();
-    printer.println("Kimolek");
+    printer.println(env.storeName);
     printer.println('teste');
     printer.cut();
 
     const buffer = printer.getBuffer();
 
     const port = new SerialPort({
-      path: 'COM4',
+      path: env.printerSerialPort,
       baudRate: 9600,
     });
 
@@ -249,6 +452,10 @@ export class PrinterService {
 
   private async doPrintOrder(orderDetails: OrderDto, printAll: boolean) {
 
+    // `orderDetails.toTake` também cobre os pedidos gravados antes do campo por item.
+    const isItemToTake = (item: ProductOrderDto) => Boolean(orderDetails.toTake || item.toTake);
+    const allToTake = orderDetails.products.length > 0 && orderDetails.products.every(isItemToTake);
+
     if (orderDetails.type === 'Store' && (orderDetails.products.filter(item => item.status).length === 0) && !printAll) {
       return;
     }
@@ -269,23 +476,23 @@ export class PrinterService {
 
             let acaiprintItem = '';
 
-            const name = `${item.quantity} x ${acai.isJuice ? 'Suco de ' : ''}Açaí ${acai.size.size.toFixed(0)} ml ${acai.inCup ? ' - (COPO)' : type === 'Delivery' || orderDetails.toTake || orderDetails.isInStorePickup || printAll || clientPrint || acai.isJuice ? '' : '(TIGELA)'}`;
+            const name = `${item.quantity} x ${acai.isJuice ? 'Suco de ' : ''}Açaí ${acai.size.size.toFixed(0)} ml ${acai.inCup ? ' - (COPO)' : type === 'Delivery' || isItemToTake(item) || orderDetails.isInStorePickup || printAll || clientPrint || acai.isJuice ? '' : '(TIGELA)'}`;
             const price = `R$${(item.quantity * acai.size.price).toFixed(2)}`;
-            acaiprintItem += `${name} ${'.'.repeat(45 - name.length - price.length)} ${price}`;
+            acaiprintItem += `${name} ${fillDots(45 - name.length - price.length)} ${price}`;
 
             if (acai.additionals) {
               acai.additionals.forEach(additional => {
                 const name = `${additional.quantity} x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
                 const price = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}${(additional.quantity * additional.additional.price).toFixed(2)}`;
 
-                const dots = '.'.repeat(43 - name.length - price.length);
+                const dots = fillDots(43 - name.length - price.length);
                 acaiprintItem += `\n  ${name} ${dots} ${price}`;
               });
             }
 
 
             if (item.observation) acaiprintItem += `\nObservação: ${item.observation}`;
-            let subtotal = ((acai.size.price + acai.additionals.reduce((acc, additional) => acc + additional.additional.price, 0)) * item.quantity);
+            const subtotal = calculateItemTotal(item);
             acaiprintItem += `\n\n${' '.repeat(34 - subtotal.toFixed(2).length)}SubTotal: ${subtotal < 10 ? 'R$ ' : 'R$'}${subtotal.toFixed(2)}`;
             return acaiprintItem;
           case 'milk_shake':
@@ -293,7 +500,7 @@ export class PrinterService {
             let milkShakePrintItem = '';
             let milkShakename = `${item.quantity}x Milk Shake ${milkShake.size.size.toFixed(0)} ml`;
             let milkShakePrice = `${(item.quantity * milkShake.size.price) < 10 ? `R$ ` : `R$`}${(item.quantity * milkShake.size.price).toFixed(2)}`;
-            const milkDots = '.'.repeat(44 - milkShakename.length - milkShakePrice.length);
+            const milkDots = fillDots(44 - milkShakename.length - milkShakePrice.length);
 
 
             milkShakePrintItem += `${milkShakename} ${milkDots} ${milkShakePrice}`;
@@ -312,13 +519,13 @@ export class PrinterService {
             if (milkShake.additionals.length !== 0) milkShakePrintItem += `\n  Adicionais:`;
 
             milkShake.additionals.forEach(additional => {
-              const name = `${additional.quantity}x ${additional.additional.name}`;
+              const name = `${additional.quantity} x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
               const price = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}  ${(additional.quantity * additional.additional.price).toFixed(2)}`;
-              const dots = '.'.repeat(37 - name.length - price.length);
+              const dots = fillDots(37 - name.length - price.length);
               milkShakePrintItem += `\n    ${name} ${dots} ${price}`;
             });
             if (item.observation) milkShakePrintItem += `\nObservação: ${item.observation}`;
-            let milkSubtotal = ((milkShake.size.price + milkShake.additionals.reduce((acc, additional) => acc + additional.additional.price, 0)) * item.quantity);
+            const milkSubtotal = calculateItemTotal(item);
             milkShakePrintItem += `\n\n${' '.repeat(34 - milkSubtotal.toFixed(2).length)}Subtotal: ${milkSubtotal < 10 ? 'R$ ' : 'R$'}${milkSubtotal.toFixed(2)}`;
 
             return milkShakePrintItem;
@@ -328,14 +535,14 @@ export class PrinterService {
             popsicles.forEach(popsicle => {
               const name = `${popsicle.popsicleQuantity}x ${popsicle.popsicle.name}`;
               const price = `${(popsicle.popsicleQuantity * popsicle.popsicle.price).toFixed(2)}`;
-              popsiclePrintItem += `\n${name} ${'.'.repeat(45 - name.length - price.length)} ${price}`;
+              popsiclePrintItem += `\n${name} ${fillDots(45 - name.length - price.length)} ${price}`;
             });
             return popsiclePrintItem;
           case 'drink':
             const drink = item.product as DrinkOrderDto;
             const drinkName = `${item.quantity}x ${drink.drink.name}`;
             const drinkPrice = `R$${(item.quantity * drink.drink.price).toFixed(2)}`;
-            return `${drinkName} ${'.'.repeat(45 - drinkName.length - drinkPrice.length)} ${drinkPrice}`;
+            return `${drinkName} ${fillDots(45 - drinkName.length - drinkPrice.length)} ${drinkPrice}`;
           case 'ice_cream':
             const iceCream = item.product as IceCreamOrderDto;
             let iceCreamPrintItem = `${item.quantity}x Sorvete ${iceCream.price.toFixed(2)}`;
@@ -350,7 +557,7 @@ export class PrinterService {
             let iceCreamPotPrintItem = '';
             const iceCreamPotName = `${item.quantity}x Pote de Sorvete ${iceCreamPot.size.size} ml`;
             const iceCreamPotPrice = `R$${(item.quantity * iceCreamPot.size.price).toFixed(2)}`;
-            iceCreamPotPrintItem += `${iceCreamPotName} ${'.'.repeat(45 - iceCreamPotName.length - iceCreamPotPrice.length)} ${iceCreamPotPrice}`;
+            iceCreamPotPrintItem += `${iceCreamPotName} ${fillDots(45 - iceCreamPotName.length - iceCreamPotPrice.length)} ${iceCreamPotPrice}`;
             iceCreamPotPrintItem += `\n  Sabor: ${iceCreamPot.flavor.name}`;
             iceCreamPotPrintItem += `\n\n${' '.repeat(37 - iceCreamPotPrice.length)}Subtotal: ${iceCreamPotPrice}`
             return iceCreamPotPrintItem;
@@ -361,16 +568,15 @@ export class PrinterService {
 
             const onSaleAcaiName = `${item.quantity * onSaleAcai.onSaleAcai.quantity}x Açaí PROMOÇÃO ${onSaleAcai.onSaleAcai.size.size.toFixed(0)} ml`;
             const onSaleAcaiPrice = `R$${(item.quantity * onSaleAcai.onSaleAcai.price).toFixed(2)}`;
-            onSaleAcaiPrintItem += `${onSaleAcaiName} ${'.'.repeat(45 - onSaleAcaiName.length - onSaleAcaiPrice.length)} ${onSaleAcaiPrice}`;
+            onSaleAcaiPrintItem += `${onSaleAcaiName} ${fillDots(45 - onSaleAcaiName.length - onSaleAcaiPrice.length)} ${onSaleAcaiPrice}`;
             const additionalRemoved = new Set(onSaleAcai.additionalRemoved.map(item => item.additional.id));
-            const additionals = onSaleAcai.onSaleAcai.additionals.filter(additional => additionalRemoved.has(additional.additional.id));
             const additionalsNotRemoved = onSaleAcai.onSaleAcai.additionals.filter(additional => !additionalRemoved.has(additional.additional.id));
 
             additionalsNotRemoved.forEach(additional => {
               const name = `1 x ${additional.additional.name}`;
               const price = `-`;
 
-              const dots = '.'.repeat(37 - name.length - price.length);
+              const dots = fillDots(37 - name.length - price.length);
               onSaleAcaiPrintItem += `\n\t${name} ${dots} ${price}`;
 
             });
@@ -386,7 +592,7 @@ export class PrinterService {
               const onSaleAcaiName = `${additional.quantity} x ${additional.additional.name}${additional.isSeparated ? ' (SEPARADO)' : ''}`;
               const onSaleAcaiPrice = `${(additional.quantity * additional.additional.price) < 10 ? `R$ ` : `R$`}${(additional.quantity * additional.additional.price).toFixed(2)}`;
 
-              const dots = '.'.repeat(37 - onSaleAcaiName.length - onSaleAcaiPrice.length);
+              const dots = fillDots(37 - onSaleAcaiName.length - onSaleAcaiPrice.length);
               onSaleAcaiPrintItem += `\t${onSaleAcaiName} ${dots} ${onSaleAcaiPrice}\n`;
             });
             if (item.observation) onSaleAcaiPrintItem += `\nObservação: ${item.observation}`;
@@ -397,13 +603,16 @@ export class PrinterService {
             let otherProductPrintItem = '';
             const otherProductName = `${item.quantity}x ${otherProduct.otherProduct.name}`;
             const otherProductPrice = `R$${(item.quantity * otherProduct.otherProduct.price).toFixed(2)}`;
-            otherProductPrintItem += `${otherProductName} ${'.'.repeat(45 - otherProductName.length - otherProductPrice.length)} ${otherProductPrice}`;
+            otherProductPrintItem += `${otherProductName} ${fillDots(45 - otherProductName.length - otherProductPrice.length)} ${otherProductPrice}`;
             if (item.observation) otherProductPrintItem += `\nObservação: ${item.observation}`;
             return otherProductPrintItem;
           default:
             return '';
         }
-      }).join(`\n-----------------------------------------------\n\n`);
+      }).map((text, index) => (
+        // Pedido misto: o LEVAR do topo não sai, então cada item marcado leva o seu.
+        !allToTake && isItemToTake(itemsToPrint[index]) ? `*** LEVAR ***\n${text}` : text
+      )).join(`\n-----------------------------------------------\n\n`);
 
       return print;
     }
@@ -444,9 +653,16 @@ export class PrinterService {
         return '';
       }
       if (order.cashChange) {
-        return `Troco para: R$${order.cashChange.toFixed(2)}\nValor do troco: R$${(order.cashChange - calculateOrderTotal(order.products, order.type, order.isInStorePickup)).toFixed(2)}`;
+        return `Troco para: R$${order.cashChange.toFixed(2)}\nValor do troco: R$${(order.cashChange - calculateOrderTotal(order.products, order.deliveryFee)).toFixed(2)}`;
       }
       return '';
+    }
+
+    // Retirada no balcão já paga sai com "PAGO" para o atendente não cobrar de novo.
+    function formatTotal(order: OrderDto) {
+      const total = `Total: R$${calculateOrderTotal(order.products, order.deliveryFee).toFixed(2)}`;
+      const isPaid = order.isInStorePickup && order.products.length > 0 && order.products.every(item => item.isPaid);
+      return isPaid ? `${total}\nPAGO` : total;
     }
 
     function formatClient(clientName: string, client: any) {
@@ -479,7 +695,7 @@ export class PrinterService {
     }
 
     function getToTake(order: OrderDto) {
-      if (order.toTake) {
+      if (allToTake) {
         return 'LEVAR';
       }
       if (order.isInStorePickup) {
@@ -518,7 +734,7 @@ export class PrinterService {
           if (!printAll) {
             printer
               .align('CT')
-              .text('Kimolek')
+              .text(env.storeName)
               .feed(1)
               .text('---------- Ordem de Pedido ---------')
               .feed(1)
@@ -532,7 +748,7 @@ export class PrinterService {
               .drawLine()
               .feed(1)
               .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
-              .text(`Total: R$${calculateOrderTotal(orderDetails.products, orderDetails.type, orderDetails.isInStorePickup).toFixed(2)}`)
+              .text(formatTotal(orderDetails))
               .text(getChange(orderDetails))
               .drawLine()
               .feed(1)
@@ -543,7 +759,7 @@ export class PrinterService {
           if (orderDetails.type === 'Store' || printAll) {
             printer
               .align('CT')
-              .text('Kimolek')
+              .text(env.storeName)
               .feed(1)
               .text('---------- Ordem de Pedido ---------')
               .feed(1)
@@ -557,7 +773,7 @@ export class PrinterService {
               .drawLine()
               .feed(1)
               .text(`${formatPaymentMethod(orderDetails.paymentMethod)}`)
-              .text(`Total: R$${calculateOrderTotal(orderDetails.products, orderDetails.type, orderDetails.isInStorePickup).toFixed(2)}`)
+              .text(formatTotal(orderDetails))
               .text(getChange(orderDetails))
               .drawLine()
               .feed(1)
@@ -601,7 +817,7 @@ export class PrinterService {
             // Via do Estabelecimento
             if (!printAll) {
               ptPrinter.alignCenter();
-              ptPrinter.println('Kimolek');
+              ptPrinter.println(env.storeName);
               ptPrinter.println('');
               ptPrinter.println('---------- Ordem de Pedido ---------');
               ptPrinter.println('');
@@ -615,7 +831,7 @@ export class PrinterService {
               ptPrinter.drawLine();
               ptPrinter.println('');
               ptPrinter.println(`${formatPaymentMethod(orderDetails.paymentMethod)}`);
-              ptPrinter.println(`Total: R$${calculateOrderTotal(orderDetails.products, orderDetails.type, orderDetails.isInStorePickup).toFixed(2)}`);
+              ptPrinter.println(formatTotal(orderDetails));
               ptPrinter.println(getChange(orderDetails));
               ptPrinter.drawLine();
               ptPrinter.println('');
@@ -625,7 +841,7 @@ export class PrinterService {
             // Via do Cliente
             if (orderDetails.type === 'Store' || printAll) {
               ptPrinter.alignCenter();
-              ptPrinter.println('Kimolek');
+              ptPrinter.println(env.storeName);
               ptPrinter.println('');
               ptPrinter.println('---------- Ordem de Pedido ---------');
               ptPrinter.println('');
@@ -639,7 +855,7 @@ export class PrinterService {
               ptPrinter.drawLine();
               ptPrinter.println('');
               ptPrinter.println(`${formatPaymentMethod(orderDetails.paymentMethod)}`);
-              ptPrinter.println(`Total: R$${calculateOrderTotal(orderDetails.products, orderDetails.type, orderDetails.isInStorePickup).toFixed(2)}`);
+              ptPrinter.println(formatTotal(orderDetails));
               ptPrinter.println(getChange(orderDetails));
               ptPrinter.drawLine();
               ptPrinter.println('');
@@ -648,7 +864,7 @@ export class PrinterService {
 
             const buffer = ptPrinter.getBuffer();
             const port = new SerialPort({
-              path: 'COM4',
+              path: env.printerSerialPort,
               baudRate: 9600,
             });
 
@@ -668,7 +884,7 @@ export class PrinterService {
             });
             break; // Sucesso, sai do loop
           } catch (btError) {
-            console.error(`Erro ao imprimir via Bluetooth (COM4) - Tentativa ${attempt} de 5:`, btError);
+            console.error(`Erro ao imprimir via Bluetooth (${env.printerSerialPort}) - Tentativa ${attempt} de 5:`, btError);
             if (attempt < 5) {
               await new Promise((resolve) => setTimeout(resolve, 300));
             }

@@ -130,14 +130,14 @@ export class SalesReportService {
   private async getByDay(startDate: Date, endDate: Date): Promise<SalesByDayDto[]> {
     const rows = await this.baseQuery(startDate, endDate)
       .select([
-        "strftime('%Y-%m-%d', order.date) as day",
+        "strftime('%Y-%m-%d', order.date, 'localtime') as day",
         'SUM(order.total) as totalSales',
         'COUNT(order.id) as orderCount',
         "SUM(CASE WHEN order.type = 'Delivery' THEN order.total ELSE 0 END) as totalDelivery",
         "SUM(CASE WHEN order.type = 'Store' THEN order.total ELSE 0 END) as totalStore",
       ])
-      .groupBy("strftime('%Y-%m-%d', order.date)")
-      .orderBy("strftime('%Y-%m-%d', order.date)", 'ASC')
+      .groupBy("strftime('%Y-%m-%d', order.date, 'localtime')")
+      .orderBy("strftime('%Y-%m-%d', order.date, 'localtime')", 'ASC')
       .getRawMany();
 
     return rows.map(row => ({

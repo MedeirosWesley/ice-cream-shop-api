@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put, Query } from '@nestjs/common';
 import { OnSaleAcaiService } from './on-sale-acai.service';
 import { CreateOnSaleAcaiDto } from './dto/create-on-sale-acai.dto';
 import { UpdateOnSaleAcaiDto } from './dto/update-on-sale-acai.dto';
@@ -15,6 +15,20 @@ export class OnSaleAcaiController {
   @Get()
   findAll() {
     return this.onSaleAcaiService.findAll();
+  }
+
+  // Precisa vir antes de @Get(':id'), senão o findOne engole a rota.
+  @Get('top')
+  findTop(
+    @Query('limit') limit?: string,
+    @Query('days') days?: string,
+    @Query('type') type?: string,
+  ) {
+    return this.onSaleAcaiService.findTop(
+      Math.max(1, Number(limit) || 4),
+      Math.max(1, Number(days) || 30),
+      type,
+    );
   }
 
   @Get(':id')

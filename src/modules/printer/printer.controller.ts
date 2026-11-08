@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { PrinterService } from './printer.service';
+import { PrintImageDto } from './dto/print-image.dto';
 
 @Controller('printer')
 export class PrinterController {
@@ -11,7 +12,7 @@ export class PrinterController {
   }
 
   @Post()
-  printImage(@Body() imageUrl: string) {
-    return this.printerService.printImage(imageUrl);
+  printImage(@Body() printImageDto: PrintImageDto) {
+    return this.printerService.printImage(printImageDto.imageUrl);
   }
 }

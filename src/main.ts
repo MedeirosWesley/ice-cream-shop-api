@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { env } from './modules/config/env';
 
 // Rede de segurança: um erro JS que escape de algum callback (ex.: impressora)
 // fica no log em vez de derrubar a API em silêncio.
@@ -13,11 +14,13 @@ process.on('unhandledRejection', (reason) => {
 });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Conexões SSE ficam abertas; sem isso o app.close() nunca termina e o
+  // start-api.bat não reinicia a API.
+  const app = await NestFactory.create(AppModule, { forceCloseConnections: true });
   app.useGlobalPipes(new ValidationPipe());
 
   app.enableShutdownHooks();
 
-  await app.listen(3000);
+  await app.listen(env.port);
 }
 bootstrap();

@@ -12,6 +12,16 @@ export class ClientController {
     return this.clientService.findAll();
   }
 
+  @Get('neighborhoods')
+  findNeighborhoods(): Promise<string[]> {
+    return this.clientService.findNeighborhoods();
+  }
+
+  @Get('streets')
+  findStreets(): Promise<string[]> {
+    return this.clientService.findStreets();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Client> {
     return this.clientService.findOne(id);

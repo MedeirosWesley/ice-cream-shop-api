@@ -1,11 +1,12 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { env } from "../env";
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: "sqlite",
-      database: "db/sql.sqlite",
-      synchronize: true,
+      database: env.dbPath,
+      synchronize: env.dbSynchronize,
       autoLoadEntities: true,
       logging: ['error'],
       // logging: ['error', 'query', 'schema'],

@@ -24,14 +24,21 @@ export class OrderProduct {
   @Column({ nullable: true })
   isPaid: boolean;
 
+  // Só este item é para levar; `Order.toTake` continua valendo para o pedido todo.
+  @Column({ default: false })
+  toTake: boolean;
+
   @Column()
   status: boolean;
 
   @Column()
   productType: string;
 
+  // Ao trocar os produtos no PATCH, os itens antigos são apagados em vez de
+  // ficarem soltos com orderId nulo.
   @ManyToOne(() => Order, order => order.products, {
     onDelete: 'CASCADE',
+    orphanedRowAction: 'delete',
   })
   order: Order;
 
